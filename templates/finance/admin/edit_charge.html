@@ -1,0 +1,275 @@
+<!-- templates/finance/admin/edit_charge.html -->
+{% extends 'base.html' %}
+
+{% block title %}Edit Charge - Supreme AI{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-teal-900">Edit Charge Range</h1>
+            <p class="text-gray-600 mt-2">Update fee structure for transaction amounts</p>
+        </div>
+        <div>
+            <a href="{% url 'finance:admin_charges_management' %}" 
+               class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
+                ← Back to Charges
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Current Range Info -->
+            <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 class="text-sm font-medium text-blue-900 mb-2">Current Charge Range</h4>
+                <p class="text-sm text-blue-800">
+                    {% if charge.is_percentage %}
+                        ${{ charge.min_amount }}+: {{ charge.percentage_rate }}% + ${{ charge.additional_fee }}
+                    {% else %}
+                        ${{ charge.min_amount }} - ${{ charge.max_amount }}: ${{ charge.fixed_charge }}
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Left Column -->
+                <div class="space-y-4">
+                    <div>
+                        <label for="{{ form.min_amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Minimum Amount *
+                        </label>
+                        {{ form.min_amount }}
+                        <p class="mt-1 text-sm text-gray-500">Minimum amount for this fee range (inclusive)</p>
+                        {% if form.min_amount.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.min_amount.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.max_amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Maximum Amount *
+                        </label>
+                        {{ form.max_amount }}
+                        <p class="mt-1 text-sm text-gray-500">Maximum amount for this fee range (inclusive)</p>
+                        {% if form.max_amount.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.max_amount.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.fixed_charge.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Fixed Charge
+                        </label>
+                        {{ form.fixed_charge }}
+                        <p class="mt-1 text-sm text-gray-500">Fixed fee amount in USD</p>
+                        {% if form.fixed_charge.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.fixed_charge.errors }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-4">
+                    <div>
+                        <label for="{{ form.percentage_rate.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Percentage Rate
+                        </label>
+                        {{ form.percentage_rate }}
+                        <p class="mt-1 text-sm text-gray-500">Percentage rate (only for percentage-based ranges)</p>
+                        {% if form.percentage_rate.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.percentage_rate.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.additional_fee.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Additional Fee
+                        </label>
+                        {{ form.additional_fee }}
+                        <p class="mt-1 text-sm text-gray-500">Additional fixed fee (only for percentage-based ranges)</p>
+                        {% if form.additional_fee.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.additional_fee.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex items-center">
+                            {{ form.is_percentage }}
+                            <label for="{{ form.is_percentage.id_for_label }}" class="ml-2 text-sm font-medium text-gray-700">
+                                Percentage Calculation
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            {{ form.is_active }}
+                            <label for="{{ form.is_active.id_for_label }}" class="ml-2 text-sm font-medium text-gray-700">
+                                Active
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calculation Preview -->
+            <div class="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <h4 class="text-sm font-medium text-amber-900 mb-2">Calculation Preview</h4>
+                <div id="calculation-preview" class="text-sm text-amber-800">
+                    <!-- Preview will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="mt-8 flex justify-end space-x-3">
+                <a href="{% url 'finance:admin_charges_management' %}" 
+                   class="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
+                    Cancel
+                </a>
+                <button type="submit" 
+                        class="bg-amber text-white px-6 py-3 rounded-lg hover:bg-gold transition duration-200 font-medium">
+                    Update Charge
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Help Information -->
+    <div class="bg-gray-50 rounded-2xl p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Charge Configuration Guide</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h4 class="font-medium text-gray-700 mb-2">Fixed Fee Ranges</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                    <li>• Set <strong>Minimum</strong> and <strong>Maximum</strong> amounts</li>
+                    <li>• Use <strong>Fixed Charge</strong> for the fee</li>
+                    <li>• Keep <strong>Percentage Calculation</strong> unchecked</li>
+                    <li>• Example: $1.00-$2.99 = $0.75</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-medium text-gray-700 mb-2">Percentage Ranges</h4>
+                <ul class="text-sm text-gray-600 space-y-1">
+                    <li>• Set <strong>Minimum</strong> amount only (max can be high)</li>
+                    <li>• Use <strong>Percentage Rate</strong> and <strong>Additional Fee</strong></li>
+                    <li>• Check <strong>Percentage Calculation</strong></li>
+                    <li>• Example: $10.00+ = 10% + $0.90</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const minAmountField = document.getElementById('{{ form.min_amount.id_for_label }}');
+    const maxAmountField = document.getElementById('{{ form.max_amount.id_for_label }}');
+    const fixedChargeField = document.getElementById('{{ form.fixed_charge.id_for_label }}');
+    const percentageRateField = document.getElementById('{{ form.percentage_rate.id_for_label }}');
+    const additionalFeeField = document.getElementById('{{ form.additional_fee.id_for_label }}');
+    const isPercentageField = document.getElementById('{{ form.is_percentage.id_for_label }}');
+    const previewElement = document.getElementById('calculation-preview');
+
+    function updatePreview() {
+        const minAmount = parseFloat(minAmountField.value) || 0;
+        const maxAmount = parseFloat(maxAmountField.value) || 0;
+        const fixedCharge = parseFloat(fixedChargeField.value) || 0;
+        const percentageRate = parseFloat(percentageRateField.value) || 0;
+        const additionalFee = parseFloat(additionalFeeField.value) || 0;
+        const isPercentage = isPercentageField.checked;
+
+        let previewText = '';
+
+        if (isPercentage) {
+            // Percentage calculation preview
+            previewText = `For amounts $${minAmount.toFixed(2)}+: `;
+            previewText += `(${percentageRate}% of amount) + $${additionalFee.toFixed(2)}`;
+            
+            // Show examples
+            if (minAmount > 0 && percentageRate > 0) {
+                const exampleAmount1 = minAmount;
+                const exampleAmount2 = minAmount * 2;
+                const charge1 = (exampleAmount1 * percentageRate / 100) + additionalFee;
+                const charge2 = (exampleAmount2 * percentageRate / 100) + additionalFee;
+                
+                previewText += `<br><br><strong>Examples:</strong>`;
+                previewText += `<br>• $${exampleAmount1.toFixed(2)} → $${charge1.toFixed(2)} fee`;
+                previewText += `<br>• $${exampleAmount2.toFixed(2)} → $${charge2.toFixed(2)} fee`;
+            }
+        } else {
+            // Fixed fee preview
+            if (minAmount === maxAmount) {
+                previewText = `For amount $${minAmount.toFixed(2)}: $${fixedCharge.toFixed(2)} fee`;
+            } else {
+                previewText = `For amounts $${minAmount.toFixed(2)}-$${maxAmount.toFixed(2)}: $${fixedCharge.toFixed(2)} fee`;
+            }
+            
+            // Show total amounts
+            if (minAmount > 0 && fixedCharge > 0) {
+                const totalMin = minAmount + fixedCharge;
+                const totalMax = maxAmount + fixedCharge;
+                
+                previewText += `<br><br><strong>Total amounts:</strong>`;
+                if (minAmount === maxAmount) {
+                    previewText += `<br>• Customer pays: $${totalMin.toFixed(2)} total`;
+                } else {
+                    previewText += `<br>• Customer pays: $${totalMin.toFixed(2)} - $${totalMax.toFixed(2)} total`;
+                }
+            }
+        }
+
+        previewElement.innerHTML = previewText;
+    }
+
+    // Update preview when any field changes
+    [minAmountField, maxAmountField, fixedChargeField, percentageRateField, additionalFeeField, isPercentageField]
+        .forEach(field => {
+            field.addEventListener('input', updatePreview);
+            field.addEventListener('change', updatePreview);
+        });
+
+    // Initial preview
+    updatePreview();
+
+    // Toggle fields based on percentage selection
+    function toggleFields() {
+        const isPercentage = isPercentageField.checked;
+        
+        if (isPercentage) {
+            fixedChargeField.disabled = true;
+            fixedChargeField.value = '0.00';
+            percentageRateField.disabled = false;
+            additionalFeeField.disabled = false;
+            maxAmountField.disabled = false;
+            maxAmountField.placeholder = '10000.00 (or higher)';
+        } else {
+            fixedChargeField.disabled = false;
+            percentageRateField.disabled = true;
+            percentageRateField.value = '0.00';
+            additionalFeeField.disabled = true;
+            additionalFeeField.value = '0.00';
+            maxAmountField.disabled = false;
+            maxAmountField.placeholder = '';
+        }
+        updatePreview();
+    }
+
+    isPercentageField.addEventListener('change', toggleFields);
+    toggleFields(); // Initial toggle
+});
+</script>
+
+<style>
+/* Custom styling for disabled fields */
+input:disabled, select:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+input:disabled::placeholder {
+    color: #9ca3af;
+}
+</style>
+{% endblock %}

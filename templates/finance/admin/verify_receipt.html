@@ -1,0 +1,165 @@
+<!-- templates/finance/admin/verify_receipt.html -->
+{% extends 'base.html' %}
+
+{% block title %}Verify POP - Supreme AI{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-teal-900">Verify Proof of Payment</h1>
+            <p class="text-gray-600 mt-2">Transaction: {{ receipt.transaction.reference_number }}</p>
+        </div>
+        <div>
+            <a href="{% url 'finance:admin_transaction_detail' receipt.transaction.pk %}" 
+               class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
+                ← Back to Transaction
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Receipt Information -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-teal-900 mb-4">Receipt Details</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-500">Transaction Reference</label>
+                    <p class="mt-1 text-sm font-medium text-gray-900">{{ receipt.transaction.reference_number }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-500">User</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ receipt.transaction.user.email }}</p>
+                    <p class="text-sm text-gray-500">{{ receipt.transaction.user.phone_number }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-500">Amount</label>
+                    <p class="mt-1 text-sm text-gray-900">${{ receipt.transaction.amount }} {{ receipt.transaction.currency }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-500">EcoCash Number</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ receipt.transaction.ecocash_number }}</p>
+                </div>
+
+                {% if receipt.receipt_number %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-500">Receipt Number</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ receipt.receipt_number }}</p>
+                </div>
+                {% endif %}
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-500">Uploaded</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ receipt.uploaded_at|date:"M d, Y H:i" }}</p>
+                    <p class="text-sm text-gray-500">by {{ receipt.uploaded_by.email }}</p>
+                </div>
+
+                {% if receipt.verified %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-500">Verification Status</label>
+                    <span class="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Verified
+                    </span>
+                    <p class="mt-1 text-sm text-gray-500">by {{ receipt.verified_by.email }} on {{ receipt.verified_at|date:"M d, Y H:i" }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Receipt Image and Verification -->
+        <div class="space-y-6">
+            <!-- Receipt Image -->
+            {% if receipt.receipt_image %}
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-teal-900 mb-4">Receipt Image</h3>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                    <a href="{{ receipt.receipt_image.url }}" target="_blank" class="block">
+                        <img src="{{ receipt.receipt_image.url }}" alt="Receipt" class="w-full h-64 object-contain rounded-lg">
+                    </a>
+                </div>
+                <div class="mt-4 text-center">
+                    <a href="{{ receipt.receipt_image.url }}" target="_blank" 
+                       class="text-amber hover:text-gold font-medium">
+                        View Full Size Image
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Verification Form -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-teal-900 mb-4">Verification Actions</h3>
+                
+                {% if not receipt.verified %}
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="verify">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Verification Notes</label>
+                        <textarea name="verification_notes" rows="3" 
+                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber focus:border-amber"
+                                  placeholder="Add verification notes...">{{ receipt.verification_notes }}</textarea>
+                    </div>
+
+                    <button type="submit" 
+                            class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition duration-200 font-medium">
+                        ✓ Verify Receipt
+                    </button>
+                </form>
+
+                <form method="post" class="pt-4 border-t border-gray-200">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reject">
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Rejection Reason</label>
+                        <textarea name="verification_notes" rows="2" 
+                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber focus:border-amber"
+                                  placeholder="Why are you rejecting this receipt?"></textarea>
+                    </div>
+
+                    <button type="submit" 
+                            class="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition duration-200 font-medium">
+                        ✗ Reject Receipt
+                    </button>
+                </form>
+                {% else %}
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <h4 class="text-lg font-medium text-gray-900 mb-2">Receipt Verified</h4>
+                    <p class="text-sm text-gray-600 mb-4">
+                        This receipt has been verified by {{ receipt.verified_by.email }} on {{ receipt.verified_at|date:"M d, Y" }}.
+                    </p>
+                    
+                    {% if receipt.verification_notes %}
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="text-sm font-medium text-gray-700 mb-1">Verification Notes:</p>
+                        <p class="text-sm text-gray-600">{{ receipt.verification_notes }}</p>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" class="mt-6">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reject">
+                        <button type="submit" 
+                                class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200 font-medium">
+                            Re-open Verification
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
