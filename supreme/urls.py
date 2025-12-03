@@ -23,6 +23,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('finance/', include('finance.urls')),
+    path('wa/', include('whatsapp.urls')),
+    path('deriv/', include('deriv.urls')),
 ]
 
 if settings.DEBUG:

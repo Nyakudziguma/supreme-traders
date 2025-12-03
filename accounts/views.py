@@ -50,7 +50,7 @@ def custom_login(request):
 
 @login_required
 def dashboard(request):
-    if request.user.user_type == 'admin':
+    if request.user.is_staff:
         return render(request, 'dashboard/admin_dashboard.html')
     else:
         return render(request, 'dashboard/user_dashboard.html')

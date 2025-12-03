@@ -124,7 +124,7 @@ class EcoCashTransaction(models.Model):
         ('completed', 'Completed'),
         ('failed', 'Failed'),
         ('cancelled', 'Cancelled'),
-        ('awaiting_pop', 'Awaiting POP'),  # For deposits waiting for proof of payment
+        ('awaiting_pop', 'Awaiting POP'), 
     )
     
     # User and transaction info
@@ -322,3 +322,21 @@ class TransactionReceipt(models.Model):
     class Meta:
         verbose_name = "Transaction Receipt"
         verbose_name_plural = "Transaction Receipts"
+
+class AuditLog(models.Model):
+    trader = models.ForeignKey(User, on_delete=models.CASCADE, related_name='audit')
+    action = models.CharField(max_length=255)  # Description of the action (e.g., "Funded account", "Withdrew funds")
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.trader.username} - {self.action} at {self.timestamp}"
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    message = models.TextField()
+    transaction = models.ForeignKey(EcoCashTransaction, on_delete=models.CASCADE, related_name='user_notifications')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Notification to {self.recipient.username}"

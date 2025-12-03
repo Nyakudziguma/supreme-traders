@@ -1,4 +1,5 @@
 # whatsapp/models.py
+from decimal import Decimal
 from django.db import models
 from accounts.models import User
 
@@ -7,6 +8,7 @@ class WhatsAppSession(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='whatsapp_sessions')
     phone_number = models.CharField(max_length=20)
     session_id = models.CharField(max_length=255, unique=True)
+    previous_step = models.CharField(max_length=100, blank=True, null=True)
     current_step = models.CharField(max_length=100, default='welcome')
     conversation_data = models.JSONField(default=dict, help_text="Store temporary conversation data")
     is_active = models.BooleanField(default=True)
@@ -44,3 +46,96 @@ class WhatsAppMessage(models.Model):
     
     def __str__(self):
         return f"{self.message_type} - {self.message_from} - {self.timestamp}"
+
+class InitiateOrders(models.Model):
+     trader = models.ForeignKey(User, on_delete=models.CASCADE)
+     amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+     ecocash_number = models.CharField(max_length=15)
+     txn_Id = models.CharField(max_length=100, blank=True, null=True)
+     account_number = models.CharField(max_length=50)
+
+     def __str__(self):
+            return self.account_number
+
+class InitiateSellOrders(models.Model):
+     trader = models.ForeignKey(User, on_delete=models.CASCADE)
+     amount = models.DecimalField(max_digits=12, decimal_places=2)
+     ecocash_number = models.CharField(max_length=15, blank=True, null=True)
+     ecocash_name = models.CharField(max_length=100, blank=True, null=True)
+     account_number = models.CharField(max_length=50)
+     email = models.EmailField()
+
+     def __str__(self):
+            return self.account_number
+     
+class EcocashPop(models.Model):
+    order = models.ForeignKey(InitiateOrders, on_delete=models.CASCADE, related_name='ecocash_pops')
+    ecocash_pop = models.ImageField(upload_to='ecocash_pops/')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    def __str__(self):
+        return f"Ecocash POP for Order {self.order.id}"
+
+
+class ClientVerification(models.Model):
+    name = models.CharField(max_length=255)
+    ecocash_number = models.CharField(max_length=20, unique=True)
+
+    national_id_image = models.ImageField(upload_to='clients/ids/', blank=True, null=True)
+    selfie_with_id = models.ImageField(upload_to='clients/selfies/', blank=True, null=True)
+
+    verified = models.BooleanField(default=False)
+    verified_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'is_staff': True},  
+        related_name='verified_clients'
+    )
+    verified_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.ecocash_number})"
+    
+    @property
+    def status(self):
+        return "Verified" if self.verified else "Unverified"
+
+
+class EcocashAgent(models.Model):
+    name = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=20, unique=True)
+    balance = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=Decimal('0.00')
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.phone_number})"
+
+    def credit(self, amount):
+        """Add amount to the agent's balance."""
+        self.balance += Decimal(amount)
+        self.save()
+
+    def debit(self, amount):
+        """Subtract amount from the agent's balance."""
+        if Decimal(amount) > self.balance:
+            raise ValueError("Insufficient balance")
+        self.balance -= Decimal(amount)
+        self.save()
+
+class BlacklistedNumber(models.Model):
+    number = models.CharField(max_length=20, unique=True)
+    reason = models.TextField(blank=True, null=True)     
+    created_at = models.DateTimeField(auto_now_add=True) 
+
+    def __str__(self):
+        return self.number

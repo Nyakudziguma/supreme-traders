@@ -26,7 +26,7 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['supreme.finpal.co.zw', 'www.supreme.finpal.co.zw']
 
 
 # Application definition
@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'training',
     'store',
     'whatsapp',
+    'ecocash',
+    'deriv',
 
 ]
 
@@ -157,3 +159,6 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+SMS_API_URL=config('SMS_API_URL')
+SMS_API_USER=config('SMS_API_USER')
+SMS_API_PASSWORD=config('SMS_API_PASSWORD')
