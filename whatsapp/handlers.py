@@ -15,7 +15,7 @@ class MessageHandler:
         """Main handler for incoming WhatsApp messages"""
         
         # Get or create session
-        session = self.whatsapp_service.get_or_create_session(phone_number, whatsapp_id)
+        session = self.whatsapp_service.get_or_create_session(phone_number, phone_number)
         
         # Check if user is blocked
         if session.user.is_blocked:

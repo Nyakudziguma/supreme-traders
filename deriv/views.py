@@ -17,17 +17,10 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from deriv_api import DerivAPI, APIError
-
+from accounts.models import User
 from .models import AuthDetails
 from whatsapp.models import InitiateSellOrders
-from bot.messageFunctions import sendWhatsAppMessage
-from bot.utils import Cancel
-from api.models import Withdraw
-from accounts.models import Account
 from finance.models import AuditLog
-from orders.views import OrderProcessor
-# Import any additional helpers you need for airtime/bundle purchases
-# from your_payment_processors import purchase_econet_airtime, purchase_econet_bundles, etc.
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +115,7 @@ class DerivPaymentAgent:
             
         except Exception as e:
             message = f"Error fetching payment agent details: {str(e)}"
-            sendWhatsAppMessage('263771542944', message)
+            logger.error(message)
             return self._get_whatsapp_url(message)
         finally:
             if api:
@@ -145,7 +138,7 @@ class DerivPaymentAgent:
             response = await api.send(paymentagent_transfer)
             if response.get('error'):
                 message = f"Transfer error: {response['error']['message']}"
-                sendWhatsAppMessage('263771542944', message)
+                logger.error(message)
                 return self._get_whatsapp_url(message)
             
             print(f"Transfer successful: {response}")
@@ -154,14 +147,14 @@ class DerivPaymentAgent:
             
         except Exception as e:
             message = f"Error creating payment agent transfer: {str(e)}"
-            sendWhatsAppMessage('263771542944', message)
+            logger.error(message)
             return self._get_whatsapp_url(message)
         finally:
             if api:
                 await api.clear()
     
     async def process_withdrawal(self, amount, client_loginid, code, token):
-        """Process withdrawal from client account."""
+        """Process withdrawal from client User."""
         try:
             api = await self._initialize_api(token)
             if not api:
@@ -207,6 +200,8 @@ class DerivPaymentAgent:
                 await api.clear()
     
     async def verify_email(self, email, amount, token, trader):
+        from whatsapp.services import WhatsAppMessage
+        service = WhatsAppMessage
         """Send verification email for withdrawal."""
         try:
             api = await self._initialize_api(token)
@@ -225,7 +220,7 @@ class DerivPaymentAgent:
                 return None
             
             message = "Verification link has been sent to your email. Please click the link to finish the withdrawal process"
-            Cancel(trader.phone_number, message)
+            service.cancel_button(trader.phone_number, message)
             
             return response
         except Exception as e:
@@ -279,117 +274,6 @@ class DerivCallbackHandler:
             </html>
         """)
     
-    @staticmethod
-    def verify_app_email_callback(request):
-        """Handle app email verification callback."""
-        code = request.GET.get('code')
-        account_number = request.GET.get('loginid')
-        
-        try:
-            acc = Withdraw.objects.get(account_number=account_number)
-        except Withdraw.DoesNotExist:
-            return DerivCallbackHandler.redirect_with_message("Account not found for withdrawal")
-        
-        try:
-            order = OrderProcessor.initiate_transaction(
-                acc.trader,
-                order_type=acc.order_type,
-                amount=acc.amount,
-                account_number=account_number,
-                ecocash_number=acc.ecocash_number,
-                ecocash_name=acc.ecocash_name
-            )
-            
-            if not order:
-                return DerivCallbackHandler.redirect_with_message("An error occurred while creating your withdrawal order")
-            
-            # Process withdrawal
-            deriv_agent = DerivPaymentAgent()
-            try:
-                withdrawal_response = asyncio.run(
-                    deriv_agent.process_withdrawal(acc.amount, account_number, code, acc.token)
-                )
-            except Exception as e:
-                OrderProcessor.process_order(order.id, 'Failed')
-                return DerivCallbackHandler.redirect_with_message(f"An error occurred during withdrawal: {e}")
-            
-            if withdrawal_response.get('paymentagent_withdraw') != 1:
-                OrderProcessor.process_order(order.id, 'Failed')
-                return DerivCallbackHandler.redirect_with_message("Withdrawal initiation failed")
-            
-            OrderProcessor.process_order(order.id, 'Completed')
-            
-            # Create transaction and handle different order types
-            return DerivCallbackHandler._handle_order_completion(order, acc, withdrawal_response)
-            
-        except ValidationError as e:
-            return DerivCallbackHandler.redirect_with_message(f"Validation Error: {e}")
-        except Exception as e:
-            return DerivCallbackHandler.redirect_with_message(f"Unexpected Error: {e}")
-    
-    @staticmethod
-    def _handle_order_completion(order, acc, withdrawal_response):
-        """Handle completion of different order types."""
-        try:
-            deriv_id = withdrawal_response.get('transaction_id')
-            extras = json.dumps(withdrawal_response)
-            
-            with db_transaction.atomic():
-                charge = order.charge
-                
-                transaction = Transaction.objects.create(
-                    order=order,
-                    trader=acc.trader,
-                    transaction_type=order.order_type,
-                    amount=order.amount,
-                    charge=charge,
-                    status='Successful',
-                    deriv_id=deriv_id,
-                    extras=extras
-                )
-                
-                withdrawals = Withdrawals.objects.create(
-                    trader=acc.trader,
-                    transaction=transaction,
-                    amount=acc.amount
-                )
-                
-                AuditLog.objects.create(
-                    trader=acc.trader,
-                    action=f"Transaction ID {transaction.id} for ${acc.amount} was completed successfully."
-                )
-                
-                # Handle different order types
-                order_type_handlers = {
-                    'Sell': DerivCallbackHandler._handle_sell_order,
-                    'Econet_Airtime': DerivCallbackHandler._handle_econet_airtime,
-                    'Econet_Bundles': DerivCallbackHandler._handle_econet_bundles,
-                    'Netone_Bundles': DerivCallbackHandler._handle_netone_bundles,
-                }
-                
-                handler = order_type_handlers.get(order.order_type)
-                if handler:
-                    return handler(order, acc, transaction, withdrawals)
-                else:
-                    return DerivCallbackHandler.redirect_with_message("Unknown order type")
-                
-        except Exception as e:
-            with db_transaction.atomic():
-                transaction = Transaction.objects.create(
-                    order=order,
-                    trader=acc.trader,
-                    transaction_type=order.order_type,
-                    amount=acc.amount,
-                    charge=order.charge,
-                    status='Failed',
-                    extras=json.dumps({"error": str(e)})
-                )
-                AuditLog.objects.create(
-                    trader=acc.trader,
-                    action=f"Transaction {transaction.id} failed. Error: {str(e)}"
-                )
-            
-            return DerivCallbackHandler.redirect_with_message("An error occurred while processing your withdrawal")
     
     @staticmethod
     def _handle_sell_order(order, acc, transaction, withdrawals):
@@ -400,184 +284,18 @@ class DerivCallbackHandler:
         message = f"User {acc.trader.phone_number} with ecocash number {acc.ecocash_number} has completed a withdrawal transaction of ${acc.amount} with reference {transaction.reference} and is now waiting for disbursement."
         
         try:
-            recipients = Account.objects.filter(user_type="support")
+            recipients = User.objects.filter(user_type="support")
             if recipients.exists():
                 recipient = random.choice(recipients)
-                OrderProcessor.create_notification(recipient, message, transaction)
             else:
-                raise Account.DoesNotExist
-        except Account.DoesNotExist:
+                raise User.DoesNotExist
+        except User.DoesNotExist:
             AuditLog.objects.create(
                 trader=acc.trader,
                 action=f"Failed to send a withdrawal notification for {transaction.reference}"
             )
         
         return DerivCallbackHandler.redirect_with_message("Your withdrawal has been completed successfully. Please check your account balance.")
-    
-    @staticmethod
-    def _handle_econet_airtime(order, acc, transaction, withdrawals):
-        """Handle Econet airtime purchase."""
-        withdrawals.status = 'Completed'
-        withdrawals.save()
-        
-        payload = {
-            "amount": float(order.amount),
-            "target_mobile": acc.RechargeAccount,
-        }
-        
-        try:
-            # You'll need to implement or import these functions
-            from your_payment_processors import purchase_econet_airtime, fetch_account_balance
-            
-            response_data = purchase_econet_airtime(payload)
-            
-            if response_data.get("status") == "success":
-                message = f"{response_data['message']} topped up account {acc.RechargeAccount} with {order.amount}"
-                
-                balance_response = fetch_account_balance("0137106121109")
-                if balance_response.get("status") == "success":
-                    vendor_balance = balance_response.get("vendorBalance")
-                    balance_message = f"Airtime purchase Successful. Your new vendor balance is: {vendor_balance}"
-                else:
-                    balance_message = "Balance retrieval failed."
-                
-                AuditLog.objects.create(
-                    trader=order.trader,
-                    action=f"Transaction with ID {transaction.id} for {order.amount} for Econet Airtime."
-                )
-                sendWhatsAppMessage("0786976684", balance_message)
-                return DerivCallbackHandler.redirect_with_message(f"{message}")
-            
-            else:
-                message = response_data.get("message", "Transaction failed")
-                notification = f"Failed to purchase airtime of ${order.amount} with reference number {order.reference_number}. Please check it out."
-                DerivCallbackHandler._send_support_notification(notification, transaction)
-                return DerivCallbackHandler.redirect_with_message(f"{message}")
-                
-        except Exception as e:
-            print(f"Error processing airtime purchase: {e}")
-            message = "Error processing your airtime purchase. Please try again."
-            return DerivCallbackHandler.redirect_with_message(f"{message}")
-    
-    @staticmethod
-    def _handle_econet_bundles(order, acc, transaction, withdrawals):
-        """Handle Econet bundles purchase."""
-        withdrawals.status = 'Completed'
-        withdrawals.save()
-        
-        try:
-            payload = {
-                "target_mobile": acc.RechargeAccount,
-                "productCode": acc.productCode,
-            }
-            
-            # You'll need to implement or import these functions
-            from your_payment_processors import purchase_econet_bundles, fetch_account_balance
-            
-            response_data = purchase_econet_bundles(payload)
-            
-            if response_data.get("data", {}).get("responseCode") in ["00", "000"]:
-                message = f"Bundle Purchase successful. Topped up account {acc.RechargeAccount} with US${order.amount} mobile data from Deriv"
-                
-                balance_response = fetch_account_balance("0137106121109")
-                if balance_response.get("status") == "success":
-                    vendor_balance = balance_response.get("vendorBalance")
-                    balance_message = f"Airtime purchase Successful. Your new vendor balance is: {vendor_balance}"
-                else:
-                    balance_message = "Balance retrieval failed."
-                
-                sendWhatsAppMessage("0786976684", balance_message)
-                AuditLog.objects.create(
-                    trader=order.trader,
-                    action=f"Transaction with ID {transaction.id} for {order.amount} for Econet Bundles."
-                )
-                return DerivCallbackHandler.redirect_with_message(f"{message}")
-            
-            else:
-                message = response_data.get("message", "Transaction failed")
-                notification = f"Failed to purchase Econet bundles of ${order.amount} with reference number {order.reference_number}. Please check it out."
-                DerivCallbackHandler._send_support_notification(notification, transaction)
-                return DerivCallbackHandler.redirect_with_message(f"{message}")
-                
-        except Exception as e:
-            print(f"Error processing bundle purchase: {e}")
-            message = "Error processing your bundle purchase. Please try again."
-            return DerivCallbackHandler.redirect_with_message(f"{message}")
-    
-    @staticmethod
-    def _handle_netone_bundles(order, acc, transaction, withdrawals):
-        """Handle NetOne bundles purchase."""
-        withdrawals.status = 'Completed'
-        withdrawals.save()
-        
-        payload = {
-            "amount": int(order.amount),
-            "target_mobile": order.RechargeAccount,
-            "productCode": order.productCode,
-        }
-        
-        try:
-            # You'll need to implement or import these functions
-            from your_payment_processors import purchase_netone_airtime, fetch_account_balance, resend_transaction_lookup
-            
-            response_data = purchase_netone_airtime(payload)
-            
-            if response_data.get("data", {}).get("responseCode") in ["00", "000"]:
-                message = f"{response_data.get('message', 'Success')} topped up account {acc.RechargeAccount} with US${acc.amount} airtime from Deriv"
-                
-                balance_response = fetch_account_balance("0137106121109")
-                if balance_response.get("status") == "success":
-                    vendor_balance = balance_response.get("vendorBalance")
-                    balance_message = f"Airtime purchase Successful. Your new vendor balance is: {vendor_balance}"
-                else:
-                    balance_message = "Balance retrieval failed."
-                
-                sendWhatsAppMessage("0786976684", balance_message)
-                return DerivCallbackHandler.redirect_with_message(f"{message}")
-            
-            elif response_data.get("data", {}).get("responseCode") in ["09", "009"]:
-                lookup_result = resend_transaction_lookup(response_data["data"].get("originalReference"))
-                
-                if lookup_result and lookup_result.get("response_code") == '00':
-                    message = f"Your airtime top-up was successfully processed for {acc.RechargeAccount}."
-                    return DerivCallbackHandler.redirect_with_message(f"{message}")
-                elif lookup_result and lookup_result.get("response_code") == '09':
-                    message = "Your transaction is still being processed. Please wait while we retry."
-                    return DerivCallbackHandler.redirect_with_message(f"{message}")
-                else:
-                    retry_response = purchase_netone_airtime(payload)
-                    if retry_response["status"] == "success" and retry_response["data"]["responseCode"] == '00':
-                        message = f"Purchase successful! Airtime of ${order.amount} credited to {acc.RechargeAccount}."
-                    else:
-                        message = "Airtime Purchase failed. Please contact support."
-                    return DerivCallbackHandler.redirect_with_message(f"{message}")
-            
-            else:
-                message = response_data.get("message", "Transaction failed")
-                notification = f"Failed to purchase NetOne airtime of ${order.amount} with reference number {order.reference_number}. Please check it out."
-                DerivCallbackHandler._send_support_notification(notification, transaction)
-                return DerivCallbackHandler.redirect_with_message(f"{message}")
-                
-        except Exception as e:
-            print(f"Error processing airtime purchase: {e}")
-            message = "Error processing your airtime purchase. Please try again."
-            return DerivCallbackHandler.redirect_with_message(f"{message}")
-    
-    @staticmethod
-    def _send_support_notification(message, transaction):
-        """Send notification to support staff."""
-        try:
-            recipients = list(Account.objects.filter(user_type="support"))
-            if recipients:
-                recipient = random.choice(recipients)
-                OrderProcessor.create_notification(recipient, message, transaction)
-            else:
-                raise Account.DoesNotExist
-        except Account.DoesNotExist:
-            AuditLog.objects.create(
-                trader=transaction.trader,
-                action=message
-            )
     
     @staticmethod
     def verify_email_callback(request):
@@ -596,7 +314,7 @@ class DerivCallbackHandler:
             
             try:
                 order = InitiateSellOrders.objects.get(account_number=account_number)
-                trader = Trader.objects.get(phone_number=order.trader.phone_number)
+                trader = User.objects.get(phone_number=order.trader.phone_number)
                 
                 # Handle different order types
                 order_handlers = {
@@ -604,27 +322,7 @@ class DerivCallbackHandler:
                         trader, 'Sell', order.amount, account_number, 
                         order.email, order.ecocash_number, '', 
                         order.ecocash_name, code, token.token
-                    ),
-                    'Econet_Airtime': lambda: handle_order(
-                        trader, order.order_type, order.amount, account_number, 
-                        order.email, '', '', '', code, token.token, 
-                        order.Merchant, order.RechargeAccount
-                    ),
-                    'Econet_Bundles': lambda: handle_order(
-                        trader, order.order_type, order.amount, account_number, 
-                        order.email, '', '', '', code, token.token, 
-                        order.Merchant, order.RechargeAccount, order.productCode
-                    ),
-                    'Netone_Bundles': lambda: handle_order(
-                        trader, order.order_type, order.amount, account_number, 
-                        order.email, '', '', '', code, token.token, 
-                        order.Merchant, order.RechargeAccount, order.productCode
-                    ),
-                    'Telone_Bundles': lambda: handle_order(
-                        trader, order.order_type, order.amount, account_number, 
-                        order.email, '', '', '', code, token.token, 
-                        order.Merchant, order.RechargeAccount, order.productCode
-                    ),
+                    )
                 }
                 
                 handler = order_handlers.get(order.order_type)
@@ -643,7 +341,7 @@ class DerivCallbackHandler:
                 return HttpResponseRedirect("https://wa.me/message/USODJOKF2Q7VK1")
             except Exception as e:
                 message = f"Error processing order: {str(e)}"
-                sendWhatsAppMessage('263771542944', message)
+                logger.error(message)
                 encoded_message = message.replace(" ", "%20")
                 return f"https://wa.me/{settings.WHATSAPP_NUMBER}?text={encoded_message}"
                 
@@ -653,7 +351,7 @@ class DerivCallbackHandler:
             return HttpResponseRedirect("https://wa.me/message/USODJOKF2Q7VK1")
         except Exception as e:
             message = f"An error occurred while verifying email: {str(e)}"
-            sendWhatsAppMessage('263771542944', message)
+            logger.error(message)
             encoded_message = message.replace(" ", "%20")
             return f"https://wa.me/{settings.WHATSAPP_NUMBER}?text={encoded_message}"
     

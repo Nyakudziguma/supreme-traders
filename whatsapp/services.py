@@ -103,6 +103,64 @@ class WhatsAppService:
         ans = response.json()
         print(ans)
 
+    def cancel_button(self, phone_number, message):
+        headers = {"Authorization": self.api_token}
+        payload = {"messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": phone_number,
+                "type": "interactive",
+                "interactive": {
+                        "type": "button",
+                        "body": {
+                        "text": message
+                        },
+                        "action": {
+                        "buttons": [
+                            {
+                            "type": "reply",
+                            "reply": {
+                                "id": "menu",
+                                "title": "❌ Cancel"
+                            }
+                            }
+                        ]
+                        }
+                    }
+                    }
+                            
+                
+        response = requests.post(self.api_url, headers=headers, json=payload)
+        ans = response.json()
+    
+    def home_button(self, phone_number, message):
+        headers = {"Authorization": self.api_token}
+        payload = {"messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": phone_number,
+                "type": "interactive",
+                "interactive": {
+                        "type": "button",
+                        "body": {
+                        "text": message
+                        },
+                        "action": {
+                        "buttons": [
+                            {
+                            "type": "reply",
+                            "reply": {
+                                "id": "menu",
+                                "title": "🔙 Menu"
+                            }
+                            }
+                        ]
+                        }
+                    }
+                    }
+                            
+                
+        response = requests.post(self.api_url, headers=headers, json=payload)
+        ans = response.json()
+
     
     def process_image_message(self, phone_number, image_data, mime_type=None):
         """Process incoming image message (POP screenshot)"""
@@ -445,7 +503,7 @@ class WhatsAppService:
             ecocash_number = order.ecocash_number
 
             ecocash_pop = EcocashPop.objects.get(order=order)
-            image_file = ecocash_pop.ecocash_pop
+            image_file = ecocash_pop.ecocash_pop.path
             pop = self.ocr_service.process_pop_image(image_file)
 
             # Ensure account number starts with 'CR'
@@ -546,7 +604,7 @@ class WhatsAppService:
                     self.send_message(fromId, f"_*processing your payment...*_")
                     
                     # Now process the deposit using DerivPaymentAgent
-                    self._process_deposit_payment(transaction, cashout, order, trader)
+                    # self._process_deposit_payment(transaction, cashout, order, trader)
             else:
                 message = (
                     "We could not find a matching EcoCash transaction for the ID you provided. "
@@ -651,7 +709,7 @@ class WhatsAppService:
                 "For any queries, please contact our support team.\n"
                 "Thank you for choosing us!"
             )
-            self.Home(transaction.user.phone_number, message)
+            self.home_button(transaction.user.phone_number, message)
             
         else:
             # ❌ Transfer failed
@@ -719,7 +777,7 @@ class WhatsAppService:
             f"Ecocash Registered Name: {local_name}\n\n"
             "Please Contact Support to get verified in order to make Deposits into Deriv account with different Ecocash Registered name."
         )
-        self.Home(transaction.user.phone_number, mismatch_msg)
+        self.home_button(transaction.user.phone_number, mismatch_msg)
         
         # Mark transaction as failed
         transaction.mark_failed(
@@ -743,7 +801,7 @@ class WhatsAppService:
             else:
                 error_message = "Transfer failed. Click below to contact support:\n" + transfer_result
         
-        self.Home(transaction.user.phone_number, error_message)
+        self.home_button(transaction.user.phone_number, error_message)
         
         # Mark transaction as failed
         transaction.mark_failed(reason=f"Transfer failed: {error_message}")
@@ -751,7 +809,7 @@ class WhatsAppService:
     def _handle_transaction_failure(self, transaction, trader, error_details, error_message):
         """Handle general transaction failure."""
         # Send error message
-        self.Home(trader.phone_number, error_message)
+        self.home_button(trader.phone_number, error_message)
         
         # Mark transaction as failed
         transaction.mark_failed(reason=f"Transaction failed: {error_details}")
