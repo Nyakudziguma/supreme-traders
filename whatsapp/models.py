@@ -70,12 +70,16 @@ class InitiateSellOrders(models.Model):
      
 class EcocashPop(models.Model):
     order = models.ForeignKey(InitiateOrders, on_delete=models.CASCADE, related_name='ecocash_pops')
-    ecocash_pop = models.ImageField(upload_to='ecocash_pops/')
+    ecocash_pop = models.ImageField(upload_to='ecocash_pops/', blank=True, null=True)
+    ecocash_message = models.TextField(blank=True, null=True)
+    has_image = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):
         return f"Ecocash POP for Order {self.order.id}"
 
+
+from django.core.exceptions import ValidationError
 
 class ClientVerification(models.Model):
     name = models.CharField(max_length=255)
@@ -90,7 +94,7 @@ class ClientVerification(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        limit_choices_to={'is_staff': True},  
+        limit_choices_to={'is_staff': True},
         related_name='verified_clients'
     )
     verified_at = models.DateTimeField(null=True, blank=True)
@@ -98,9 +102,33 @@ class ClientVerification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def clean_ecocash(self):
+        number = self.ecocash_number.strip()
+
+        # remove spaces and +
+        number = number.replace(" ", "").replace("+", "")
+
+        # If starts with 263
+        if number.startswith("263"):
+            number = number[3:]   # remove 263 → "786976684"
+
+        # If starts with 07
+        if number.startswith("07"):
+            number = number[1:]   # remove "0" → "786976684"
+
+        # Final validation: must start with 7 and be 9 digits
+        if not (number.startswith("7") and number.isdigit() and len(number) == 9):
+            raise ValidationError("Invalid EcoCash number format")
+
+        return number
+
+    def save(self, *args, **kwargs):
+        self.ecocash_number = self.clean_ecocash()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.name} ({self.ecocash_number})"
-    
+
     @property
     def status(self):
         return "Verified" if self.verified else "Unverified"
@@ -139,3 +167,25 @@ class BlacklistedNumber(models.Model):
 
     def __str__(self):
         return self.number
+
+class Switch(models.Model):
+    Transaction_Types = (
+        ('deposit', 'Deposit'),
+        ('withdrawal', 'Withdrawal'),
+        ('signals', 'Signals'),
+        ('books', 'Books'),
+        ('training', 'Training'),
+        ('other', 'Other'),
+    )
+    transaction_type = models.CharField(max_length=50, choices=Transaction_Types)
+    off_message = models.TextField(blank=True, null=True)
+    on_message = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.transaction_type} - {'Active' if self.is_active else 'Inactive'}"
+
+
+    

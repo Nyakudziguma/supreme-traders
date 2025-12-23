@@ -1,0 +1,476 @@
+<!-- templates/books/update.html -->
+{% extends "base.html" %}
+{% load book_filters %}
+
+{% block title %}Edit {{ book.title }} - Supreme AI{% endblock %}
+
+{% block page_title %}Edit Book{% endblock %}
+{% block page_subtitle %}Update your book details{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto animate-fade-in">
+    <!-- Book Info Summary -->
+    <div class="bg-gradient-to-br from-amber-50 to-white rounded-xl border border-amber-200 p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="w-16 h-16 rounded-xl bg-gradient-to-br 
+                    {% if book.is_paid %}from-green-100 to-green-200
+                    {% else %}from-blue-100 to-blue-200{% endif %} 
+                    flex items-center justify-center mr-4">
+                    <i class="fas fa-book {% if book.is_paid %}text-green-600{% else %}text-blue-600{% endif %} text-2xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">{{ book.title }}</h2>
+                    <div class="flex items-center space-x-3 mt-2">
+                        <span class="text-sm text-gray-600">
+                            <i class="fas fa-download mr-1"></i>
+                            {{ book.download_count }} downloads
+                        </span>
+                        <span class="text-sm text-gray-600">
+                            <i class="fas fa-calendar mr-1"></i>
+                            {{ book.created_at|date:"M d, Y" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'books:detail' book.pk %}" 
+                   class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                    <i class="fas fa-eye mr-2"></i>Preview
+                </a>
+                <a href="{% url 'books:download' book.pk %}" 
+                   class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                    <i class="fas fa-download mr-2"></i>Download
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <h3 class="text-lg font-semibold text-gray-900">
+                <i class="fas fa-edit text-amber-600 mr-2"></i>
+                Edit Book Details
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">Update your book information below</p>
+        </div>
+        
+        <form method="POST" enctype="multipart/form-data" class="p-6 space-y-6">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="p-4 rounded-lg border border-red-200 bg-red-50 text-red-800">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-3 text-lg"></i>
+                    <div>
+                        <p class="font-medium">Please correct the errors below:</p>
+                        <ul class="mt-2 text-sm list-disc pl-5 space-y-1">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ field|title }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Book Title -->
+            <div>
+                <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-heading text-amber-500 mr-2"></i>
+                    Book Title *
+                </label>
+                {{ form.title }}
+                <p class="mt-1 text-xs text-gray-500">Choose a descriptive title for your book</p>
+            </div>
+            
+            <!-- Description -->
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-align-left text-blue-500 mr-2"></i>
+                    Description
+                </label>
+                {{ form.description }}
+                <div class="flex justify-between mt-1">
+                    <p class="text-xs text-gray-500">Describe what readers will learn from your book</p>
+                    <p class="text-xs text-gray-500" id="description-count">0 characters</p>
+                </div>
+            </div>
+            
+            <!-- Current File Info -->
+            <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                    <i class="fas fa-file text-purple-500 mr-2"></i>
+                    Current File
+                </label>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center mr-3">
+                            <i class="fas fa-file-pdf text-purple-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">{{ book.file.name|slice:"7:"|truncatechars:30 }}</p>
+                            <p class="text-sm text-gray-600">{{ book.file.size|filesizeformat }} • {{ book.download_count }} downloads</p>
+                        </div>
+                    </div>
+                    <a href="{{ book.file.url }}" 
+                       target="_blank"
+                       class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
+                        <i class="fas fa-external-link-alt mr-1"></i>View
+                    </a>
+                </div>
+            </div>
+            
+            <!-- File Upload (Optional Update) -->
+            <div>
+                <label for="{{ form.file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-file-upload text-green-500 mr-2"></i>
+                    Update File (Optional)
+                </label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-400 transition-colors"
+                     id="file-upload-area">
+                    <div class="mb-4" id="file-icon">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400"></i>
+                    </div>
+                    {{ form.file }}
+                    <p class="text-sm text-gray-600 mb-2">Drag & drop or click to upload</p>
+                    <p class="text-xs text-gray-500">PDF, EPUB, MOBI, DOC, DOCX, or TXT (max 50MB)</p>
+                    <div class="mt-3 hidden" id="file-preview">
+                        <div class="flex items-center justify-between bg-green-50 p-3 rounded-lg border border-green-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-file text-green-600 mr-3"></i>
+                                <div>
+                                    <p class="font-medium text-gray-900" id="file-name"></p>
+                                    <p class="text-sm text-gray-600" id="file-size"></p>
+                                </div>
+                            </div>
+                            <button type="button" 
+                                    onclick="clearFile()"
+                                    class="text-red-600 hover:text-red-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-1 text-xs text-amber-600">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    Note: Uploading a new file will replace the current one. Download count will be preserved.
+                </p>
+            </div>
+            
+            <!-- Price & Payment Settings -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="{{ form.price.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-dollar-sign text-green-500 mr-2"></i>
+                        Price (USD)
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500">$</span>
+                        </div>
+                        {{ form.price }}
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Set price to 0 for free books</p>
+                </div>
+                
+                <div>
+                    <div class="flex items-center h-full">
+                        <div class="flex items-center">
+                            {{ form.is_paid }}
+                            <label for="{{ form.is_paid.id_for_label }}" class="ml-3 text-sm font-medium text-gray-700">
+                                Paid Book
+                            </label>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Enable to charge for this book</p>
+                </div>
+            </div>
+            
+            <!-- Featured Book -->
+            <div>
+                <div class="flex items-center">
+                    {{ form.is_featured }}
+                    <label for="{{ form.is_featured.id_for_label }}" class="ml-3 text-sm font-medium text-gray-700">
+                        <i class="fas fa-star text-amber-500 mr-2"></i>
+                        Featured Book
+                    </label>
+                </div>
+                <p class="mt-1 text-xs text-gray-500">Featured books are highlighted in the community library</p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row items-center justify-between pt-6 border-t border-gray-200 space-y-4 sm:space-y-0">
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'books:list' %}" 
+                       class="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to List
+                    </a>
+                    <a href="{% url 'books:delete' book.pk %}" 
+                       class="px-6 py-3 rounded-lg border border-red-300 text-red-700 font-medium hover:bg-red-50 transition-colors">
+                        <i class="fas fa-trash mr-2"></i>Delete Book
+                    </a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button type="button" 
+                            onclick="window.history.back()"
+                            class="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="btn-gold px-8 py-3 rounded-lg font-semibold text-lg">
+                        <i class="fas fa-save mr-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Statistics Section -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Download Stats -->
+        <div class="bg-white rounded-xl border border-amber-200 p-6">
+            <h4 class="font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-chart-line text-green-600 mr-2"></i>
+                Download Statistics
+            </h4>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-600">Total Downloads</span>
+                    <span class="text-2xl font-bold text-gray-900">{{ book.download_count }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-600">Last 7 Days</span>
+                    <span class="font-semibold text-green-600">+12%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-600">Monthly Average</span>
+                    <span class="font-semibold text-gray-900">{{ book.download_count|divisibleby:3|default:"5" }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Revenue Stats (for paid books) -->
+        {% if book.is_paid %}
+        <div class="bg-white rounded-xl border border-amber-200 p-6">
+            <h4 class="font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-money-bill-wave text-blue-600 mr-2"></i>
+                Revenue Overview
+            </h4>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-600">Price per Copy</span>
+                    <span class="text-2xl font-bold text-green-600">${{ book.price }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-600">Potential Revenue</span>
+                    <span class="font-semibold text-gray-900">${{ book.download_count|multiply:book.price|floatformat:2 }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-600">Conversion Rate</span>
+                    <span class="font-semibold text-blue-600">8.5%</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+    </div>
+</div>
+
+<script>
+    // Character count for description
+    const descriptionField = document.getElementById('{{ form.description.id_for_label }}');
+    const descriptionCount = document.getElementById('description-count');
+    
+    function updateDescriptionCount() {
+        const count = descriptionField.value.length;
+        descriptionCount.textContent = `${count} characters`;
+        
+        if (count > 1000) {
+            descriptionCount.classList.add('text-red-600');
+        } else {
+            descriptionCount.classList.remove('text-red-600');
+        }
+    }
+    
+    descriptionField.addEventListener('input', updateDescriptionCount);
+    updateDescriptionCount(); // Initial count
+    
+    // File upload handling
+    const fileInput = document.getElementById('{{ form.file.id_for_label }}');
+    const fileUploadArea = document.getElementById('file-upload-area');
+    const filePreview = document.getElementById('file-preview');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
+    const fileIcon = document.getElementById('file-icon');
+    
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            const file = this.files[0];
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            
+            fileName.textContent = file.name;
+            fileSize.textContent = `${fileSizeMB} MB`;
+            
+            // Change icon based on file type
+            if (file.name.toLowerCase().endsWith('.pdf')) {
+                fileIcon.innerHTML = '<i class="fas fa-file-pdf text-4xl text-red-500"></i>';
+            } else if (file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')) {
+                fileIcon.innerHTML = '<i class="fas fa-file-word text-4xl text-blue-500"></i>';
+            } else if (file.name.toLowerCase().endsWith('.epub') || file.name.toLowerCase().endsWith('.mobi')) {
+                fileIcon.innerHTML = '<i class="fas fa-book text-4xl text-green-500"></i>';
+            } else {
+                fileIcon.innerHTML = '<i class="fas fa-file text-4xl text-gray-500"></i>';
+            }
+            
+            filePreview.classList.remove('hidden');
+            fileUploadArea.classList.remove('border-dashed', 'border-gray-300');
+            fileUploadArea.classList.add('border-solid', 'border-green-400', 'bg-green-50');
+        }
+    });
+    
+    // Drag and drop functionality
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        fileUploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        fileUploadArea.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        fileUploadArea.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight() {
+        fileUploadArea.classList.add('border-green-500', 'bg-green-50');
+    }
+    
+    function unhighlight() {
+        fileUploadArea.classList.remove('border-green-500', 'bg-green-50');
+    }
+    
+    fileUploadArea.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        
+        // Trigger change event
+        const event = new Event('change');
+        fileInput.dispatchEvent(event);
+    }
+    
+    // Clear file selection
+    function clearFile() {
+        fileInput.value = '';
+        filePreview.classList.add('hidden');
+        fileUploadArea.classList.remove('border-solid', 'border-green-400', 'bg-green-50');
+        fileUploadArea.classList.add('border-dashed', 'border-gray-300');
+        fileIcon.innerHTML = '<i class="fas fa-cloud-upload-alt text-4xl text-gray-400"></i>';
+    }
+    
+    // Toggle price field based on paid status
+    document.getElementById('{{ form.is_paid.id_for_label }}').addEventListener('change', function() {
+        const priceField = document.getElementById('{{ form.price.id_for_label }}');
+        if (this.checked) {
+            priceField.required = true;
+            priceField.placeholder = 'Enter price';
+            priceField.classList.add('border-green-300');
+            priceField.classList.remove('border-gray-300');
+        } else {
+            priceField.required = false;
+            priceField.value = '';
+            priceField.placeholder = '0.00';
+            priceField.classList.remove('border-green-300');
+            priceField.classList.add('border-gray-300');
+        }
+    });
+    
+    // File size validation
+    fileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        
+        if (file && file.size > maxSize) {
+            alert('File size must be under 50MB');
+            clearFile();
+        }
+    });
+    
+    // Form submission confirmation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const price = document.getElementById('{{ form.price.id_for_label }}').value;
+        const isPaid = document.getElementById('{{ form.is_paid.id_for_label }}').checked;
+        
+        if (isPaid && (!price || parseFloat(price) <= 0)) {
+            e.preventDefault();
+            alert('Price must be greater than 0 for paid books.');
+            return;
+        }
+        
+        if (!isPaid && price && parseFloat(price) > 0) {
+            e.preventDefault();
+            alert('Free books cannot have a price. Set price to 0 or leave blank.');
+            return;
+        }
+        
+        // Show loading state
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+        submitButton.disabled = true;
+    });
+</script>
+
+<style>
+    /* Custom file upload styling */
+    #{{ form.file.id_for_label }} {
+        opacity: 0;
+        position: absolute;
+        z-index: -1;
+    }
+    
+    #file-upload-area {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    #file-upload-area:hover {
+        border-color: #10b981;
+        background-color: #f0fdf4;
+    }
+    
+    /* Character count styling */
+    #description-count {
+        font-family: monospace;
+    }
+    
+    /* Price field styling */
+    input[name="price"]:focus {
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    }
+    
+    /* Checkbox styling */
+    input[type="checkbox"] {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+    
+    /* Smooth transitions */
+    .transition-all {
+        transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}

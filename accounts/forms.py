@@ -1,6 +1,6 @@
 # accounts/.py
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
 from django.core.exceptions import ValidationError
 from .models import User
 from django.contrib.auth.forms import AuthenticationForm
@@ -78,3 +78,79 @@ class CustomUserCreationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+class ProfileUpdateForm(forms.ModelForm):
+    first_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all',
+            'placeholder': 'First Name'
+        })
+    )
+    
+    last_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all',
+            'placeholder': 'Last Name'
+        })
+    )
+    
+    email = forms.EmailField(
+        disabled=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-gray-50 outline-none',
+            'readonly': 'readonly'
+        })
+    )
+    
+    phone_number = forms.CharField(
+        disabled=True,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-gray-50 outline-none',
+            'readonly': 'readonly'
+        })
+    )
+    
+    date_of_birth = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all',
+            'type': 'date'
+        })
+    )
+    
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'phone_number', 'date_of_birth']
+
+class PasswordChangeForm(PasswordChangeForm):
+    old_password = forms.CharField(
+        label="Current Password",
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all',
+            'placeholder': 'Enter your current password'
+        })
+    )
+    
+    new_password1 = forms.CharField(
+        label="New Password",
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all',
+            'placeholder': 'Enter new password'
+        }),
+        help_text="Your password must contain at least 8 characters."
+    )
+    
+    new_password2 = forms.CharField(
+        label="Confirm New Password",
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all',
+            'placeholder': 'Confirm new password'
+        })
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Remove default help text
+        self.fields['new_password1'].help_text = ""

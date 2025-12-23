@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+
+{% block title %}Supreme AI - Trading Signals{% endblock %}
+
+{% block page_title %}Trading Signals{% endblock %}
+
+{% block page_subtitle %}Manage and send trading signals to subscribers{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'signals:create_signal' %}" class="btn-gold px-4 py-2.5 rounded-lg text-sm font-semibold">
+    <i class="fas fa-plus mr-2"></i>New Signal
+</a>
+<a href="{% url 'signals:whatsapp_templates' %}" class="btn-blue px-4 py-2.5 rounded-lg text-sm font-semibold">
+    <i class="fas fa-whatsapp mr-2"></i>Templates
+</a>
+<button onclick="toggleFilters()" class="px-4 py-2.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 border border-gray-300">
+    <i class="fas fa-filter mr-2"></i>Filters
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fade-in">
+    <!-- Filters Section -->
+    <div id="filtersSection" class="bg-white rounded-xl border border-amber-200 p-4 mb-6 shadow-sm hidden">
+        <form method="GET" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Signal Type Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-chart-line text-amber-500 mr-1"></i>
+                        Signal Type
+                    </label>
+                    <select name="type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:outline-none">
+                        <option value="">All Types</option>
+                        <option value="buy" {% if filter_type == 'buy' %}selected{% endif %}>Buy</option>
+                        <option value="sell" {% if filter_type == 'sell' %}selected{% endif %}>Sell</option>
+                        <option value="scalp" {% if filter_type == 'scalp' %}selected{% endif %}>Scalp</option>
+                        <option value="swing" {% if filter_type == 'swing' %}selected{% endif %}>Swing</option>
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-circle text-blue-500 mr-1"></i>
+                        Status
+                    </label>
+                    <select name="status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:outline-none">
+                        <option value="">All Status</option>
+                        <option value="draft" {% if filter_status == 'draft' %}selected{% endif %}>Draft</option>
+                        <option value="sent" {% if filter_status == 'sent' %}selected{% endif %}>Sent</option>
+                        <option value="cancelled" {% if filter_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        <option value="expired" {% if filter_status == 'expired' %}selected{% endif %}>Expired</option>
+                    </select>
+                </div>
+
+                <!-- Asset Type Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-coins text-purple-500 mr-1"></i>
+                        Asset Type
+                    </label>
+                    <select name="asset_type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:outline-none">
+                        <option value="">All Assets</option>
+                        <option value="forex" {% if filter_asset == 'forex' %}selected{% endif %}>Forex</option>
+                        <option value="crypto" {% if filter_asset == 'crypto' %}selected{% endif %}>Crypto</option>
+                        <option value="stocks" {% if filter_asset == 'stocks' %}selected{% endif %}>Stocks</option>
+                        <option value="commodities" {% if filter_asset == 'commodities' %}selected{% endif %}>Commodities</option>
+                        <option value="indices" {% if filter_asset == 'indices' %}selected{% endif %}>Indices</option>
+                    </select>
+                </div>
+
+                <!-- Search -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-search text-gray-500 mr-1"></i>
+                        Search
+                    </label>
+                    <input type="text" 
+                           name="search" 
+                           value="{{ search_query|default:'' }}"
+                           placeholder="Search by asset or title..."
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Filter Actions -->
+            <div class="flex justify-end space-x-3 pt-2">
+                <a href="{% url 'signals:signal_list' %}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300">
+                    <i class="fas fa-redo mr-2"></i>Reset
+                </a>
+                <button type="submit" class="btn-gold px-4 py-2 rounded-lg text-sm font-semibold">
+                    <i class="fas fa-filter mr-2"></i>Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Total Signals -->
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 hover-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-blue-600 font-medium">Total Signals</p>
+                    <p class="text-2xl font-bold text-blue-900 mt-1">{{ page_obj.paginator.count }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                    <i class="fas fa-signal text-white text-lg"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Signals -->
+        <div class="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-4 hover-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-amber-600 font-medium">Pending</p>
+                    <p class="text-2xl font-bold text-amber-900 mt-1">
+                        {{ page_obj.paginator.count|default:0 }}
+                    </p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                    <i class="fas fa-clock text-white text-lg"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sent Today -->
+        <div class="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-4 hover-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-green-600 font-medium">Sent Today</p>
+                    <p class="text-2xl font-bold text-green-900 mt-1">
+                        {{ page_obj.paginator.count|default:0 }}
+                    </p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                    <i class="fas fa-paper-plane text-white text-lg"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Rate -->
+        <div class="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4 hover-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-purple-600 font-medium">Success Rate</p>
+                    <p class="text-2xl font-bold text-purple-900 mt-1">87.5%</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                    <i class="fas fa-trophy text-white text-lg"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signals Table -->
+    <div class="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-list text-amber-600 mr-2"></i>
+                    Trading Signals
+                </h3>
+                <div class="text-sm text-gray-600">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            <i class="fas fa-hashtag text-gray-500 mr-1"></i>ID
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            <i class="fas fa-chart-line text-gray-500 mr-1"></i>Signal
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            <i class="fas fa-coins text-gray-500 mr-1"></i>Asset
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            <i class="fas fa-bullseye text-gray-500 mr-1"></i>Entry
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            <i class="fas fa-flag text-gray-500 mr-1"></i>Status
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            <i class="fas fa-calendar text-gray-500 mr-1"></i>Created
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            <i class="fas fa-cog text-gray-500 mr-1"></i>Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for signal in page_obj %}
+                    <tr class="hover:bg-amber-50 transition-colors group">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-mono font-bold text-blue-600">
+                                {{ signal.signal_id|default:"N/A" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center mr-3
+                                    {% if signal.signal_type == 'buy' %}bg-gradient-to-br from-green-100 to-green-200 text-green-700
+                                    {% elif signal.signal_type == 'sell' %}bg-gradient-to-br from-red-100 to-red-200 text-red-700
+                                    {% else %}bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700{% endif %}">
+                                    <i class="fas fa-{% if signal.signal_type == 'buy' %}arrow-up{% else %}arrow-down{% endif %}"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">{{ signal.title|truncatechars:30 }}</div>
+                                    <div class="text-xs text-gray-500 capitalize">{{ signal.signal_type }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mr-2">
+                                    <i class="fas fa-{% if signal.asset_type == 'crypto' %}bitcoin{% else %}chart-bar{% endif %} text-amber-600 text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">{{ signal.asset_pair|default:"N/A" }}</div>
+                                    <div class="text-xs text-gray-500 capitalize">{{ signal.asset_type }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if signal.entry_price %}
+                            <div class="text-sm font-semibold text-gray-900">${{ signal.entry_price }}</div>
+                            {% else %}
+                            <span class="text-xs text-gray-500 italic">Not set</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+                                {% if signal.status == 'sent' %}bg-green-100 text-green-800
+                                {% elif signal.status == 'draft' %}bg-amber-100 text-amber-800
+                                {% elif signal.status == 'cancelled' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                <i class="fas fa-circle mr-1 text-xs"></i>
+                                {{ signal.status|title }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            {{ signal.created_at|date:"M d, Y" }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <a href="{% url 'signals:signal_detail' pk=signal.pk %}" 
+                                   class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-600 hover:from-blue-200 hover:to-blue-300 transition-all"
+                                   title="View Details">
+                                    <i class="fas fa-eye text-xs"></i>
+                                </a>
+                                <a href="{% url 'signals:edit_signal' pk=signal.pk %}" 
+                                   class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-amber-600 hover:from-amber-200 hover:to-amber-300 transition-all"
+                                   title="Edit">
+                                    <i class="fas fa-edit text-xs"></i>
+                                </a>
+                                <a href="{% url 'signals:send_bulk_signal' pk=signal.pk %}" 
+                                   class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center text-green-600 hover:from-green-200 hover:to-green-300 transition-all"
+                                   title="Send Signal">
+                                    <i class="fas fa-paper-plane text-xs"></i>
+                                </a>
+                                <button onclick="sendTestSignal('{{ signal.pk }}')"
+                                   class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center text-purple-600 hover:from-purple-200 hover:to-purple-300 transition-all"
+                                   title="Send Test">
+                                    <i class="fas fa-flask text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center">
+                            <div class="text-gray-400 mb-3">
+                                <i class="fas fa-signal text-4xl"></i>
+                            </div>
+                            <p class="text-gray-600 font-medium">No trading signals found</p>
+                            <p class="text-gray-500 text-sm mt-1">Create your first signal to get started</p>
+                            <a href="{% url 'signals:create_signal' %}" class="btn-gold inline-flex items-center px-4 py-2 mt-4 rounded-lg text-sm font-semibold">
+                                <i class="fas fa-plus mr-2"></i>Create First Signal
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="px-6 py-4 border-t border-amber-200 bg-gray-50">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} signals
+                </div>
+                <div class="flex items-center space-x-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page=1{% if filter_type %}&type={{ filter_type }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}{% if filter_asset %}&asset_type={{ filter_asset }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                       class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if filter_type %}&type={{ filter_type }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}{% if filter_asset %}&asset_type={{ filter_asset }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                       class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <span class="px-3 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+                            {{ num }}
+                        </span>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?page={{ num }}{% if filter_type %}&type={{ filter_type }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}{% if filter_asset %}&asset_type={{ filter_asset }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                           class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300">
+                            {{ num }}
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if filter_type %}&type={{ filter_type }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}{% if filter_asset %}&asset_type={{ filter_asset }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                       class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if filter_type %}&type={{ filter_type }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}{% if filter_asset %}&asset_type={{ filter_asset }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" 
+                       class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Asset Distribution -->
+        <div class="bg-white rounded-xl border border-amber-200 p-5">
+            <h4 class="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-chart-pie text-purple-600 mr-2"></i>
+                Signal Distribution
+            </h4>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-700">Buy Signals</span>
+                    <div class="flex items-center">
+                        <span class="text-sm font-semibold text-green-600 mr-2">45%</span>
+                        <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-green-500 to-green-600" style="width: 45%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-700">Sell Signals</span>
+                    <div class="flex items-center">
+                        <span class="text-sm font-semibold text-red-600 mr-2">35%</span>
+                        <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-red-500 to-red-600" style="width: 35%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-700">Other Signals</span>
+                    <div class="flex items-center">
+                        <span class="text-sm font-semibold text-blue-600 mr-2">20%</span>
+                        <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-blue-500 to-blue-600" style="width: 20%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white rounded-xl border border-amber-200 p-5">
+            <h4 class="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-bolt text-amber-600 mr-2"></i>
+                Recent Activity
+            </h4>
+            <div class="space-y-3">
+                {% for signal in page_obj|slice:":3" %}
+                <a href="{% url 'signals:signal_detail' pk=signal.pk %}" class="flex items-center justify-between p-3 hover:bg-amber-50 rounded-lg transition-colors">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mr-3">
+                            <i class="fas fa-{% if signal.signal_type == 'buy' %}arrow-up text-green-600{% else %}arrow-down text-red-600{% endif %} text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ signal.asset_pair }}</p>
+                            <p class="text-xs text-gray-500">{{ signal.created_at|timesince }} ago</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-800">
+                        {{ signal.signal_type|upper }}
+                    </span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-5">
+            <h4 class="text-sm font-semibold text-amber-900 mb-4 flex items-center">
+                <i class="fas fa-rocket text-amber-600 mr-2"></i>
+                Quick Actions
+            </h4>
+            <div class="space-y-3">
+                <a href="{% url 'signals:bulk_jobs_list' %}" class="flex items-center justify-between p-3 bg-white/80 hover:bg-white rounded-lg transition-colors group">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-3">
+                            <i class="fas fa-broadcast-tower text-white text-sm"></i>
+                        </div>
+                        <span class="text-sm font-medium text-gray-900">Bulk Signal Jobs</span>
+                    </div>
+                    <i class="fas fa-arrow-right text-blue-500 group-hover:translate-x-1 transition-transform"></i>
+                </a>
+                <a href="{% url 'signals:subscriber_management' %}" class="flex items-center justify-between p-3 bg-white/80 hover:bg-white rounded-lg transition-colors group">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mr-3">
+                            <i class="fas fa-users text-white text-sm"></i>
+                        </div>
+                        <span class="text-sm font-medium text-gray-900">Subscribers</span>
+                    </div>
+                    <i class="fas fa-arrow-right text-green-500 group-hover:translate-x-1 transition-transform"></i>
+                </a>
+                <a href="{% url 'signals:dashboard' %}" class="flex items-center justify-between p-3 bg-white/80 hover:bg-white rounded-lg transition-colors group">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mr-3">
+                            <i class="fas fa-tachometer-alt text-white text-sm"></i>
+                        </div>
+                        <span class="text-sm font-medium text-gray-900">Signal Dashboard</span>
+                    </div>
+                    <i class="fas fa-arrow-right text-purple-500 group-hover:translate-x-1 transition-transform"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toggle filters section
+    function toggleFilters() {
+        const filtersSection = document.getElementById('filtersSection');
+        filtersSection.classList.toggle('hidden');
+    }
+
+    // Send test signal
+    function sendTestSignal(signalId) {
+        if (!confirm('Send test signal to your WhatsApp number?')) {
+            return;
+        }
+
+        const button = event.target.closest('button');
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
+
+        fetch(`/signals/${signalId}/send-test/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('success', data.message);
+            } else {
+                showNotification('error', data.error || 'Failed to send test signal');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('error', 'An error occurred');
+        })
+        .finally(() => {
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+        });
+    }
+
+    // Show notification
+    function showNotification(type, message) {
+        const container = document.createElement('div');
+        container.className = `fixed top-4 right-4 z-50 animate-slide-up`;
+        
+        const notification = document.createElement('div');
+        notification.className = `flex items-center p-4 rounded-xl shadow-lg max-w-sm ${
+            type === 'success' 
+                ? 'bg-gradient-to-r from-green-50 to-green-100 border border-green-200 text-green-800' 
+                : 'bg-gradient-to-r from-red-50 to-red-100 border border-red-200 text-red-800'
+        }`;
+        
+        notification.innerHTML = `
+            <div class="w-8 h-8 rounded-full ${
+                type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+            } flex items-center justify-center mr-3">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
+            </div>
+            <div class="flex-1 font-medium">${message}</div>
+            <button onclick="this.closest('.fixed').remove()" class="ml-4 text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        container.appendChild(notification);
+        document.body.appendChild(container);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (container.parentNode) {
+                container.parentNode.removeChild(container);
+            }
+        }, 5000);
+    }
+
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

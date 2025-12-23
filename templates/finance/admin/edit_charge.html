@@ -1,161 +1,330 @@
-<!-- templates/finance/admin/edit_charge.html -->
 {% extends 'base.html' %}
 
 {% block title %}Edit Charge - Supreme AI{% endblock %}
 
+{% block page_title %}Edit Charge Range{% endblock %}
+{% block page_subtitle %}Update fee structure for transaction amounts{% endblock %}
+
+{% block page_actions %}
+<div class="flex items-center space-x-3">
+    <a href="{% url 'finance:admin_charges_management' %}" 
+       class="px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Charges
+    </a>
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-3xl font-bold text-teal-900">Edit Charge Range</h1>
-            <p class="text-gray-600 mt-2">Update fee structure for transaction amounts</p>
+    <!-- Edit Charge Card -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-edit text-amber-600 mr-2"></i>
+                        Edit Charge Configuration
+                    </h3>
+                    <p class="text-sm text-gray-600 mt-1">Update fee structure for specific transaction amounts</p>
+                </div>
+                <div class="text-sm font-medium text-gray-700">
+                    ID: <span class="font-mono bg-gray-100 px-2 py-1 rounded">{{ charge.id }}</span>
+                </div>
+            </div>
         </div>
-        <div>
-            <a href="{% url 'finance:admin_charges_management' %}" 
-               class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
-                ← Back to Charges
-            </a>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-2xl shadow-lg p-6">
-        <form method="post">
+        
+        <form method="post" class="p-6">
             {% csrf_token %}
             
-            <!-- Current Range Info -->
-            <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 class="text-sm font-medium text-blue-900 mb-2">Current Charge Range</h4>
-                <p class="text-sm text-blue-800">
-                    {% if charge.is_percentage %}
-                        ${{ charge.min_amount }}+: {{ charge.percentage_rate }}% + ${{ charge.additional_fee }}
-                    {% else %}
-                        ${{ charge.min_amount }} - ${{ charge.max_amount }}: ${{ charge.fixed_charge }}
-                    {% endif %}
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Left Column -->
-                <div class="space-y-4">
-                    <div>
-                        <label for="{{ form.min_amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            Minimum Amount *
-                        </label>
-                        {{ form.min_amount }}
-                        <p class="mt-1 text-sm text-gray-500">Minimum amount for this fee range (inclusive)</p>
-                        {% if form.min_amount.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.min_amount.errors }}</p>
-                        {% endif %}
+            <!-- Current Configuration Summary -->
+            <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-amber-50 rounded-xl border border-amber-200">
+                <h4 class="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                    Current Configuration
+                </h4>
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br {% if charge.is_percentage %}from-purple-100 to-purple-200{% else %}from-blue-100 to-blue-200{% endif %} flex items-center justify-center mr-3">
+                        <i class="fas {% if charge.is_percentage %}fa-percentage{% else %}fa-dollar-sign{% endif %} {% if charge.is_percentage %}text-purple-600{% else %}text-blue-600{% endif %}"></i>
                     </div>
-
                     <div>
-                        <label for="{{ form.max_amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            Maximum Amount *
-                        </label>
-                        {{ form.max_amount }}
-                        <p class="mt-1 text-sm text-gray-500">Maximum amount for this fee range (inclusive)</p>
-                        {% if form.max_amount.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.max_amount.errors }}</p>
-                        {% endif %}
-                    </div>
-
-                    <div>
-                        <label for="{{ form.fixed_charge.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            Fixed Charge
-                        </label>
-                        {{ form.fixed_charge }}
-                        <p class="mt-1 text-sm text-gray-500">Fixed fee amount in USD</p>
-                        {% if form.fixed_charge.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.fixed_charge.errors }}</p>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Right Column -->
-                <div class="space-y-4">
-                    <div>
-                        <label for="{{ form.percentage_rate.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            Percentage Rate
-                        </label>
-                        {{ form.percentage_rate }}
-                        <p class="mt-1 text-sm text-gray-500">Percentage rate (only for percentage-based ranges)</p>
-                        {% if form.percentage_rate.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.percentage_rate.errors }}</p>
-                        {% endif %}
-                    </div>
-
-                    <div>
-                        <label for="{{ form.additional_fee.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            Additional Fee
-                        </label>
-                        {{ form.additional_fee }}
-                        <p class="mt-1 text-sm text-gray-500">Additional fixed fee (only for percentage-based ranges)</p>
-                        {% if form.additional_fee.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.additional_fee.errors }}</p>
-                        {% endif %}
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex items-center">
-                            {{ form.is_percentage }}
-                            <label for="{{ form.is_percentage.id_for_label }}" class="ml-2 text-sm font-medium text-gray-700">
-                                Percentage Calculation
-                            </label>
+                        <div class="text-sm font-medium text-gray-900">
+                            {% if charge.is_percentage %}
+                                ${{ charge.min_amount }}+
+                            {% else %}
+                                ${{ charge.min_amount }} - ${{ charge.max_amount }}
+                            {% endif %}
                         </div>
-                        <div class="flex items-center">
-                            {{ form.is_active }}
-                            <label for="{{ form.is_active.id_for_label }}" class="ml-2 text-sm font-medium text-gray-700">
-                                Active
-                            </label>
+                        <div class="text-xs text-gray-600 mt-1">
+                            Charge: 
+                            {% if charge.is_percentage %}
+                                {{ charge.percentage_rate }}% + ${{ charge.additional_fee }}
+                            {% else %}
+                                ${{ charge.fixed_charge }}
+                            {% endif %}
+                            • Status: 
+                            <span class="{% if charge.is_active %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ charge.is_active|yesno:"Active,Inactive" }}
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            {% if form.non_field_errors %}
+            <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
+                    <div class="text-sm text-red-700">
+                        {{ form.non_field_errors }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
-            <!-- Calculation Preview -->
-            <div class="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                <h4 class="text-sm font-medium text-amber-900 mb-2">Calculation Preview</h4>
-                <div id="calculation-preview" class="text-sm text-amber-800">
-                    <!-- Preview will be populated by JavaScript -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Amount Range Section -->
+                <div class="space-y-6">
+                    <div class="p-4 bg-gradient-to-r from-amber-50 to-white rounded-lg border border-amber-200">
+                        <h4 class="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-arrows-alt-h text-amber-600 mr-2"></i>
+                            Amount Range
+                        </h4>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="{{ form.min_amount.id_for_label }}" class="block text-xs font-medium text-gray-700 mb-2">
+                                    Minimum Amount *
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                    {{ form.min_amount }}
+                                </div>
+                                {% if form.min_amount.errors %}
+                                <p class="mt-1 text-xs text-red-600">{{ form.min_amount.errors.0 }}</p>
+                                {% endif %}
+                                <p class="mt-2 text-xs text-gray-500">Minimum transaction amount for this fee range</p>
+                            </div>
+
+                            <div>
+                                <label for="{{ form.max_amount.id_for_label }}" class="block text-xs font-medium text-gray-700 mb-2">
+                                    Maximum Amount *
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                    {{ form.max_amount }}
+                                </div>
+                                {% if form.max_amount.errors %}
+                                <p class="mt-1 text-xs text-red-600">{{ form.max_amount.errors.0 }}</p>
+                                {% endif %}
+                                <p class="mt-2 text-xs text-gray-500">Maximum transaction amount for this fee range</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charge Type Section -->
+                    <div class="p-4 bg-gradient-to-r from-amber-50 to-white rounded-lg border border-amber-200">
+                        <h4 class="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-cog text-gray-600 mr-2"></i>
+                            Charge Settings
+                        </h4>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label for="{{ form.fixed_charge.id_for_label }}" class="block text-xs font-medium text-gray-700 mb-2">
+                                    Fixed Charge
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                    {{ form.fixed_charge }}
+                                </div>
+                                {% if form.fixed_charge.errors %}
+                                <p class="mt-1 text-xs text-red-600">{{ form.fixed_charge.errors.0 }}</p>
+                                {% endif %}
+                                <p class="mt-2 text-xs text-gray-500">Fixed fee amount in USD</p>
+                            </div>
+
+                            <div>
+                                <label for="{{ form.percentage_rate.id_for_label }}" class="block text-xs font-medium text-gray-700 mb-2">
+                                    Percentage Rate
+                                </label>
+                                <div class="relative">
+                                    {{ form.percentage_rate }}
+                                    <span class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">%</span>
+                                </div>
+                                {% if form.percentage_rate.errors %}
+                                <p class="mt-1 text-xs text-red-600">{{ form.percentage_rate.errors.0 }}</p>
+                                {% endif %}
+                                <p class="mt-2 text-xs text-gray-500">Percentage rate for amount</p>
+                            </div>
+
+                            <div>
+                                <label for="{{ form.additional_fee.id_for_label }}" class="block text-xs font-medium text-gray-700 mb-2">
+                                    Additional Fee
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                    {{ form.additional_fee }}
+                                </div>
+                                {% if form.additional_fee.errors %}
+                                <p class="mt-1 text-xs text-red-600">{{ form.additional_fee.errors.0 }}</p>
+                                {% endif %}
+                                <p class="mt-2 text-xs text-gray-500">Extra fixed fee added to percentage</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview and Settings Section -->
+                <div class="space-y-6">
+                    <!-- Calculation Preview -->
+                    <div class="p-4 bg-gradient-to-r from-blue-50 to-amber-50 rounded-xl border border-amber-200">
+                        <h4 class="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-calculator text-green-600 mr-2"></i>
+                            Live Calculation Preview
+                        </h4>
+                        <div id="calculation-preview" class="space-y-3">
+                            <!-- Preview will be populated by JavaScript -->
+                            <div class="animate-pulse">
+                                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Toggles -->
+                    <div class="p-4 bg-gradient-to-r from-amber-50 to-white rounded-lg border border-amber-200">
+                        <h4 class="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                            <i class="fas fa-toggle-on text-purple-600 mr-2"></i>
+                            Configuration Options
+                        </h4>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-amber-300 transition-colors">
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center mr-3">
+                                        <i class="fas fa-percentage text-purple-600"></i>
+                                    </div>
+                                    <div>
+                                        <label for="{{ form.is_percentage.id_for_label }}" class="text-sm font-medium text-gray-900">
+                                            Percentage Calculation
+                                        </label>
+                                        <p class="text-xs text-gray-500">Use percentage-based fees instead of fixed</p>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    {{ form.is_percentage }}
+                                    <label for="{{ form.is_percentage.id_for_label }}" class="switch-label"></label>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-amber-300 transition-colors">
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 rounded-lg {% if charge.is_active %}bg-green-100{% else %}bg-red-100{% endif %} flex items-center justify-center mr-3">
+                                        <i class="fas {% if charge.is_active %}fa-check-circle text-green-600{% else %}fa-times-circle text-red-600{% endif %}"></i>
+                                    </div>
+                                    <div>
+                                        <label for="{{ form.is_active.id_for_label }}" class="text-sm font-medium text-gray-900">
+                                            Active Status
+                                        </label>
+                                        <p class="text-xs text-gray-500">Enable or disable this charge range</p>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    {{ form.is_active }}
+                                    <label for="{{ form.is_active.id_for_label }}" class="switch-label"></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Form Actions -->
-            <div class="mt-8 flex justify-end space-x-3">
+            <div class="mt-8 pt-6 border-t border-amber-200 flex justify-end space-x-3">
                 <a href="{% url 'finance:admin_charges_management' %}" 
-                   class="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
-                    Cancel
+                   class="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+                    <i class="fas fa-times mr-2"></i>Cancel
                 </a>
                 <button type="submit" 
-                        class="bg-amber text-white px-6 py-3 rounded-lg hover:bg-gold transition duration-200 font-medium">
-                    Update Charge
+                        class="btn-gold px-5 py-2.5 rounded-lg font-semibold">
+                    <i class="fas fa-save mr-2"></i>Update Charge
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- Help Information -->
-    <div class="bg-gray-50 rounded-2xl p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Charge Configuration Guide</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <h4 class="font-medium text-gray-700 mb-2">Fixed Fee Ranges</h4>
-                <ul class="text-sm text-gray-600 space-y-1">
-                    <li>• Set <strong>Minimum</strong> and <strong>Maximum</strong> amounts</li>
-                    <li>• Use <strong>Fixed Charge</strong> for the fee</li>
-                    <li>• Keep <strong>Percentage Calculation</strong> unchecked</li>
-                    <li>• Example: $1.00-$2.99 = $0.75</li>
-                </ul>
-            </div>
-            <div>
-                <h4 class="font-medium text-gray-700 mb-2">Percentage Ranges</h4>
-                <ul class="text-sm text-gray-600 space-y-1">
-                    <li>• Set <strong>Minimum</strong> amount only (max can be high)</li>
-                    <li>• Use <strong>Percentage Rate</strong> and <strong>Additional Fee</strong></li>
-                    <li>• Check <strong>Percentage Calculation</strong></li>
-                    <li>• Example: $10.00+ = 10% + $0.90</li>
-                </ul>
+    <!-- Quick Guide -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-book-open text-amber-600 mr-2"></i>
+                Charge Configuration Guide
+            </h3>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Fixed Fee Guide -->
+                <div class="p-4 bg-gradient-to-r from-blue-50 to-white rounded-lg border border-blue-200">
+                    <div class="flex items-center mb-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mr-3">
+                            <i class="fas fa-dollar-sign text-blue-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900">Fixed Fee Ranges</h4>
+                            <p class="text-xs text-gray-600">For specific amount brackets</p>
+                        </div>
+                    </div>
+                    <ul class="text-xs text-gray-600 space-y-2">
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                            Set both <strong>Minimum</strong> and <strong>Maximum</strong> amounts
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                            Use <strong>Fixed Charge</strong> field for the fee
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                            Keep <strong>Percentage Calculation</strong> turned off
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                            Example: $1.00-$2.99 = $0.75 fee
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Percentage Guide -->
+                <div class="p-4 bg-gradient-to-r from-purple-50 to-white rounded-lg border border-purple-200">
+                    <div class="flex items-center mb-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center mr-3">
+                            <i class="fas fa-percentage text-purple-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900">Percentage Ranges</h4>
+                            <p class="text-xs text-gray-600">For variable amount fees</p>
+                        </div>
+                    </div>
+                    <ul class="text-xs text-gray-600 space-y-2">
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                            Set <strong>Minimum</strong> amount only (max can be high)
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                            Use <strong>Percentage Rate</strong> and <strong>Additional Fee</strong>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                            Turn on <strong>Percentage Calculation</strong>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                            Example: $10.00+ = 10% + $0.90 fee
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -169,68 +338,144 @@ document.addEventListener('DOMContentLoaded', function() {
     const percentageRateField = document.getElementById('{{ form.percentage_rate.id_for_label }}');
     const additionalFeeField = document.getElementById('{{ form.additional_fee.id_for_label }}');
     const isPercentageField = document.getElementById('{{ form.is_percentage.id_for_label }}');
+    const isActiveField = document.getElementById('{{ form.is_active.id_for_label }}');
     const previewElement = document.getElementById('calculation-preview');
 
-    function updatePreview() {
+    function formatCurrency(amount) {
+        return '$' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+    }
+
+    function calculateCharge(amount) {
         const minAmount = parseFloat(minAmountField.value) || 0;
-        const maxAmount = parseFloat(maxAmountField.value) || 0;
         const fixedCharge = parseFloat(fixedChargeField.value) || 0;
         const percentageRate = parseFloat(percentageRateField.value) || 0;
         const additionalFee = parseFloat(additionalFeeField.value) || 0;
         const isPercentage = isPercentageField.checked;
 
-        let previewText = '';
+        if (isPercentage) {
+            return (amount * percentageRate / 100) + additionalFee;
+        } else {
+            return fixedCharge;
+        }
+    }
+
+    function updatePreview() {
+        const minAmount = parseFloat(minAmountField.value) || 0;
+        const maxAmount = parseFloat(maxAmountField.value) || 0;
+        const isPercentage = isPercentageField.checked;
+        const isActive = isActiveField.checked;
+
+        let previewHTML = '';
 
         if (isPercentage) {
             // Percentage calculation preview
-            previewText = `For amounts $${minAmount.toFixed(2)}+: `;
-            previewText += `(${percentageRate}% of amount) + $${additionalFee.toFixed(2)}`;
+            const percentageRate = parseFloat(percentageRateField.value) || 0;
+            const additionalFee = parseFloat(additionalFeeField.value) || 0;
             
+            previewHTML = `
+                <div class="p-3 bg-white rounded-lg border border-purple-200">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+                            <i class="fas fa-percentage text-purple-600"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900">Percentage Range</div>
+                            <div class="text-xs text-gray-600">${formatCurrency(minAmount)}+</div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-700">
+                        Formula: (Amount × ${percentageRate}%) + ${formatCurrency(additionalFee)}
+                    </div>
+                </div>
+            `;
+
             // Show examples
-            if (minAmount > 0 && percentageRate > 0) {
-                const exampleAmount1 = minAmount;
-                const exampleAmount2 = minAmount * 2;
-                const charge1 = (exampleAmount1 * percentageRate / 100) + additionalFee;
-                const charge2 = (exampleAmount2 * percentageRate / 100) + additionalFee;
+            const examples = [];
+            if (minAmount > 0) {
+                examples.push(minAmount);
+                examples.push(minAmount * 2);
+                examples.push(minAmount * 5);
+            }
+            
+            if (examples.length > 0) {
+                previewHTML += '<div class="space-y-2 mt-3">';
+                previewHTML += '<div class="text-xs font-medium text-gray-700">Examples:</div>';
                 
-                previewText += `<br><br><strong>Examples:</strong>`;
-                previewText += `<br>• $${exampleAmount1.toFixed(2)} → $${charge1.toFixed(2)} fee`;
-                previewText += `<br>• $${exampleAmount2.toFixed(2)} → $${charge2.toFixed(2)} fee`;
+                examples.forEach(amount => {
+                    const charge = calculateCharge(amount);
+                    const total = amount + charge;
+                    
+                    previewHTML += `
+                        <div class="text-xs text-gray-600">
+                            <div class="flex justify-between">
+                                <span>Amount: ${formatCurrency(amount)}</span>
+                                <span class="font-medium">Fee: ${formatCurrency(charge)}</span>
+                            </div>
+                            <div class="text-gray-500 text-right">Total: ${formatCurrency(total)}</div>
+                        </div>
+                    `;
+                });
+                previewHTML += '</div>';
             }
         } else {
             // Fixed fee preview
-            if (minAmount === maxAmount) {
-                previewText = `For amount $${minAmount.toFixed(2)}: $${fixedCharge.toFixed(2)} fee`;
-            } else {
-                previewText = `For amounts $${minAmount.toFixed(2)}-$${maxAmount.toFixed(2)}: $${fixedCharge.toFixed(2)} fee`;
-            }
+            const fixedCharge = parseFloat(fixedChargeField.value) || 0;
             
-            // Show total amounts
-            if (minAmount > 0 && fixedCharge > 0) {
+            previewHTML = `
+                <div class="p-3 bg-white rounded-lg border border-blue-200">
+                    <div class="flex items-center mb-2">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                            <i class="fas fa-dollar-sign text-blue-600"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm font-semibold text-gray-900">Fixed Fee Range</div>
+                            <div class="text-xs text-gray-600">${formatCurrency(minAmount)} - ${formatCurrency(maxAmount)}</div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-700">
+                        Flat fee: ${formatCurrency(fixedCharge)}
+                    </div>
+                </div>
+            `;
+
+            // Show total range
+            if (minAmount > 0 && maxAmount > 0) {
                 const totalMin = minAmount + fixedCharge;
                 const totalMax = maxAmount + fixedCharge;
                 
-                previewText += `<br><br><strong>Total amounts:</strong>`;
-                if (minAmount === maxAmount) {
-                    previewText += `<br>• Customer pays: $${totalMin.toFixed(2)} total`;
-                } else {
-                    previewText += `<br>• Customer pays: $${totalMin.toFixed(2)} - $${totalMax.toFixed(2)} total`;
-                }
+                previewHTML += `
+                    <div class="mt-3 text-xs text-gray-600">
+                        <div class="font-medium mb-1">Customer Pays:</div>
+                        <div class="flex justify-between">
+                            <span>Min: ${formatCurrency(totalMin)}</span>
+                            <span>Max: ${formatCurrency(totalMax)}</span>
+                        </div>
+                    </div>
+                `;
             }
         }
 
-        previewElement.innerHTML = previewText;
+        // Add status indicator
+        previewHTML += `
+            <div class="mt-4 pt-3 border-t border-gray-200">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-gray-700">Status:</span>
+                    <span class="text-xs px-2 py-1 rounded ${isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        ${isActive ? 'Active' : 'Inactive'}
+                    </span>
+                </div>
+            </div>
+        `;
+
+        previewElement.innerHTML = previewHTML;
     }
 
     // Update preview when any field changes
-    [minAmountField, maxAmountField, fixedChargeField, percentageRateField, additionalFeeField, isPercentageField]
+    [minAmountField, maxAmountField, fixedChargeField, percentageRateField, additionalFeeField, isPercentageField, isActiveField]
         .forEach(field => {
             field.addEventListener('input', updatePreview);
             field.addEventListener('change', updatePreview);
         });
-
-    // Initial preview
-    updatePreview();
 
     // Toggle fields based on percentage selection
     function toggleFields() {
@@ -238,25 +483,67 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (isPercentage) {
             fixedChargeField.disabled = true;
-            fixedChargeField.value = '0.00';
+            fixedChargeField.parentElement.parentElement.classList.add('opacity-60');
             percentageRateField.disabled = false;
             additionalFeeField.disabled = false;
-            maxAmountField.disabled = false;
-            maxAmountField.placeholder = '10000.00 (or higher)';
+            maxAmountField.parentElement.parentElement.classList.add('opacity-60');
+            maxAmountField.value = '10000.00';
+            maxAmountField.disabled = true;
         } else {
             fixedChargeField.disabled = false;
+            fixedChargeField.parentElement.parentElement.classList.remove('opacity-60');
             percentageRateField.disabled = true;
-            percentageRateField.value = '0.00';
             additionalFeeField.disabled = true;
-            additionalFeeField.value = '0.00';
+            maxAmountField.parentElement.parentElement.classList.remove('opacity-60');
             maxAmountField.disabled = false;
-            maxAmountField.placeholder = '';
         }
         updatePreview();
     }
 
-    isPercentageField.addEventListener('change', toggleFields);
-    toggleFields(); // Initial toggle
+    // Custom toggle switch styling
+    function styleToggleSwitches() {
+        const checkboxes = [isPercentageField, isActiveField];
+        checkboxes.forEach(checkbox => {
+            if (!checkbox.nextElementSibling || !checkbox.nextElementSibling.classList.contains('switch-label')) {
+                return;
+            }
+            
+            checkbox.style.display = 'none';
+            const label = checkbox.nextElementSibling;
+            label.classList.add('cursor-pointer');
+            
+            // Create custom toggle
+            label.innerHTML = `
+                <div class="w-12 h-6 flex items-center rounded-full p-1 ${checkbox.checked ? 'bg-amber-500' : 'bg-gray-300'} transition-colors">
+                    <div class="bg-white w-4 h-4 rounded-full shadow-md transform ${checkbox.checked ? 'translate-x-6' : 'translate-x-0'} transition-transform"></div>
+                </div>
+            `;
+            
+            label.addEventListener('click', () => {
+                checkbox.checked = !checkbox.checked;
+                label.innerHTML = `
+                    <div class="w-12 h-6 flex items-center rounded-full p-1 ${checkbox.checked ? 'bg-amber-500' : 'bg-gray-300'} transition-colors">
+                        <div class="bg-white w-4 h-4 rounded-full shadow-md transform ${checkbox.checked ? 'translate-x-6' : 'translate-x-0'} transition-transform"></div>
+                    </div>
+                `;
+                
+                if (checkbox === isPercentageField) {
+                    toggleFields();
+                } else {
+                    updatePreview();
+                }
+                
+                // Trigger change event
+                const event = new Event('change');
+                checkbox.dispatchEvent(event);
+            });
+        });
+    }
+
+    // Initialize
+    toggleFields();
+    styleToggleSwitches();
+    updatePreview();
 });
 </script>
 
@@ -270,6 +557,41 @@ input:disabled, select:disabled {
 
 input:disabled::placeholder {
     color: #9ca3af;
+}
+
+/* Form input styling */
+input[type="number"], 
+input[type="text"],
+select {
+    @apply w-full border border-gray-300 rounded-lg px-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white;
+}
+
+/* Hide original checkboxes */
+input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Animation for preview */
+#calculation-preview {
+    transition: all 0.3s ease;
+}
+
+/* Loading animation */
+.animate-pulse div {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Opacity for disabled sections */
+.opacity-60 {
+    opacity: 0.6;
 }
 </style>
 {% endblock %}

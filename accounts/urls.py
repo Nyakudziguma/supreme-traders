@@ -7,7 +7,7 @@ app_name = 'accounts'
 urlpatterns = [
     # Authentication
     path('login/', views.custom_login, name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('logout/', views.logout_view, name='logout'),
     path('signup/', views.signup, name='signup'),
     
     # Password reset
@@ -33,7 +33,9 @@ urlpatterns = [
          name='password_reset_complete'),
     
     # Dashboard and Profile
-    path('dashboard/', views.dashboard, name='dashboard'),
-    path('profile/', views.profile, name='profile'),
-    path('profile/update/', views.profile_update, name='profile_update'),
+   path('profile/', views.profile_view, name='profile'),
+    path('profile/update/', views.update_profile, name='update_profile'),
+    path('profile/change-password/', views.change_password, name='change_password'),
+    path('profile/toggle-2fa/', views.toggle_2fa, name='toggle_2fa'),
+    path('profile/verify-2fa/', views.verify_2fa, name='verify_2fa'),   
 ]

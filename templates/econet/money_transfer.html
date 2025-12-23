@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Send Money - Supreme AI{% endblock %}
+
+{% block page_title %}Send Money{% endblock %}
+{% block page_subtitle %}Transfer funds securely via EcoCash{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto animate-fade-in">
+    {% if messages %}
+    <div class="mb-6 space-y-3">
+        {% for message in messages %}
+        <div class="flex items-center justify-between p-4 rounded-xl border 
+            {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-800
+            {% else %}border-green-200 bg-green-50 text-green-800{% endif %}">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full 
+                    {% if message.tags == 'error' %}bg-red-100 text-red-600
+                    {% else %}bg-green-100 text-green-600{% endif %} flex items-center justify-center mr-3">
+                    <i class="fas {% if message.tags == 'error' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i>
+                </div>
+                <span class="font-medium">{{ message }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Transfer Form -->
+    <div class="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-green-50 to-white">
+            <h3 class="text-lg font-semibold text-gray-900">
+                <i class="fas fa-money-bill-transfer text-green-600 mr-2"></i>
+                EcoCash Transfer
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">Fill in the details below to send money</p>
+        </div>
+        
+        <form method="POST" class="p-6 space-y-6">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="p-4 rounded-lg border border-red-200 bg-red-50 text-red-800">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-3 text-lg"></i>
+                    <div>
+                        <p class="font-medium">Please correct the errors below:</p>
+                        <ul class="mt-2 text-sm list-disc pl-5 space-y-1">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Transaction Type -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                    <i class="fas fa-exchange-alt text-amber-500 mr-2"></i>
+                    Transaction Type
+                </label>
+                {{ form.transaction_type }}
+            </div>
+            
+            <!-- Recipient Details -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="{{ form.ecocash_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user text-blue-500 mr-2"></i>
+                        Recipient Name
+                    </label>
+                    {{ form.ecocash_name }}
+                </div>
+                
+                <div>
+                    <label for="{{ form.ecocash_number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-phone text-green-500 mr-2"></i>
+                        EcoCash Number *
+                    </label>
+                    {{ form.ecocash_number }}
+                    <p class="mt-1 text-xs text-gray-500">Must start with 07 (10 digits total)</p>
+                </div>
+            </div>
+            
+            <!-- Amount -->
+            <div>
+                <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-dollar-sign text-amber-500 mr-2"></i>
+                    Amount (USD) *
+                </label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500">$</span>
+                    </div>
+                    {{ form.amount }}
+                </div>
+                <p class="mt-1 text-xs text-gray-500">Maximum amount: $5,000</p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% url 'econet:econet_dashboard' %}" 
+                   class="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+                
+                <button type="submit" 
+                        class="btn-gold px-8 py-3 rounded-lg font-semibold text-lg">
+                    <i class="fas fa-paper-plane mr-2"></i>Send OTP
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Security Information -->
+    <div class="mt-8 bg-gradient-to-r from-amber-50 to-white rounded-xl border border-amber-200 p-6">
+        <h4 class="font-semibold text-gray-900 mb-4 flex items-center">
+            <i class="fas fa-shield-alt text-amber-600 mr-2"></i>
+            Security Information
+        </h4>
+        <ul class="space-y-3">
+            <li class="flex items-start">
+                <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                    <i class="fas fa-check text-green-600 text-xs"></i>
+                </div>
+                <span class="text-sm text-gray-700">OTP will be sent to your WhatsApp for verification</span>
+            </li>
+            <li class="flex items-start">
+                <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                    <i class="fas fa-check text-green-600 text-xs"></i>
+                </div>
+                <span class="text-sm text-gray-700">OTP is valid for 5 minutes only</span>
+            </li>
+            
+        </ul>
+    </div>
+</div>
+
+<style>
+    /* Custom styling for form fields */
+    input, select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid #d1d5db;
+        transition: all 0.3s ease;
+    }
+    
+    input:focus, select:focus {
+        outline: none;
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    }
+    
+    /* Specific styling for amount field with dollar sign */
+    #id_amount {
+        padding-left: 2rem;
+    }
+</style>
+{% endblock %}

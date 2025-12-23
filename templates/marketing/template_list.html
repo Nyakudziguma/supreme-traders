@@ -1,0 +1,165 @@
+<!-- templates/marketing/template_list.html -->
+{% extends 'base.html' %}
+
+{% block title %}Marketing Templates - Supreme AI{% endblock %}
+
+{% block page_title %}Marketing Templates{% endblock %}
+{% block page_subtitle %}Use pre-built templates for quick campaigns{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Templates Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for template in templates %}
+        <div class="bg-white rounded-xl border border-amber-200 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+            <div class="p-6">
+                <!-- Template Header -->
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <h3 class="font-semibold text-gray-900 text-lg">{{ template.name }}</h3>
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium 
+                            {% if template.type == 'transaction_success' %}bg-green-100 text-green-800
+                            {% elif template.type == 'transaction_failed' %}bg-red-100 text-red-800
+                            {% elif template.type == 'welcome' %}bg-blue-100 text-blue-800
+                            {% else %}bg-amber-100 text-amber-800{% endif %} mt-2">
+                            {{ template.type|title }}
+                        </span>
+                    </div>
+                    <div class="w-10 h-10 rounded-full 
+                        {% if template.type == 'transaction_success' %}bg-green-100 text-green-600
+                        {% elif template.type == 'transaction_failed' %}bg-red-100 text-red-600
+                        {% elif template.type == 'welcome' %}bg-blue-100 text-blue-600
+                        {% else %}bg-amber-100 text-amber-600{% endif %}
+                        flex items-center justify-center">
+                        {% if template.type == 'transaction_success' %}
+                        <i class="fas fa-check-circle"></i>
+                        {% elif template.type == 'transaction_failed' %}
+                        <i class="fas fa-times-circle"></i>
+                        {% elif template.type == 'welcome' %}
+                        <i class="fas fa-hand-wave"></i>
+                        {% else %}
+                        <i class="fas fa-bullhorn"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Template Preview -->
+                <div class="mb-4">
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <pre class="text-sm text-gray-600 whitespace-pre-wrap font-mono line-clamp-3">{{ template.content }}</pre>
+                    </div>
+                </div>
+                
+                <!-- Template Variables -->
+                {% if template.variables %}
+                <div class="mb-4">
+                    <p class="text-xs text-gray-500 mb-2">Available Variables:</p>
+                    <div class="flex flex-wrap gap-1">
+                        {% for var in template.variables %}
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{{ var }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Use Template Button -->
+                <button onclick="useTemplate({{ forloop.counter0 }})"
+                        class="w-full px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition duration-200 font-medium flex items-center justify-center">
+                    <i class="fas fa-magic mr-2"></i> Use This Template
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full">
+            <div class="bg-white rounded-xl border border-amber-200 p-12 text-center">
+                <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-file-alt text-amber-400 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">No templates available</h3>
+                <p class="text-gray-600">Templates will appear here when configured</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Template Guide -->
+    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                    <i class="fas fa-graduation-cap text-blue-600"></i>
+                </div>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-blue-900 mb-4">Using Templates</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="p-3 bg-white rounded-lg border border-blue-200">
+                        <h4 class="font-medium text-gray-900 mb-2">1. Select Template</h4>
+                        <p class="text-sm text-gray-600">Choose a template that matches your needs</p>
+                    </div>
+                    <div class="p-3 bg-white rounded-lg border border-blue-200">
+                        <h4 class="font-medium text-gray-900 mb-2">2. Customize</h4>
+                        <p class="text-sm text-gray-600">Edit the template content and variables</p>
+                    </div>
+                    <div class="p-3 bg-white rounded-lg border border-blue-200">
+                        <h4 class="font-medium text-gray-900 mb-2">3. Send</h4>
+                        <p class="text-sm text-gray-600">Choose audience and send immediately or schedule</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+
+<script>
+// Templates data
+const templates = [
+    {% for template in templates %}
+    {
+        name: "{{ template.name }}",
+        type: "{{ template.type }}",
+        content: `{{ template.content|escapejs }}`,
+        variables: {{ template.variables|safe }}
+    },
+    {% endfor %}
+];
+
+function useTemplate(index) {
+    const template = templates[index];
+    
+    // Store template in localStorage
+    localStorage.setItem('selectedTemplate', JSON.stringify(template));
+    
+    // Redirect to create campaign page
+    window.location.href = "{% url 'marketing:campaign_create' %}";
+}
+
+// Check if there's a template to load on the create page
+if (window.location.pathname.includes('/create/')) {
+    const savedTemplate = localStorage.getItem('selectedTemplate');
+    if (savedTemplate) {
+        const template = JSON.parse(savedTemplate);
+        
+        // Fill the form with template data
+        document.querySelector('input[name="title"]').value = template.name;
+        document.querySelector('select[name="message_type"]').value = template.type;
+        document.getElementById('messageContent').value = template.content;
+        
+        // Update preview
+        updatePreview();
+        
+        // Clear saved template
+        localStorage.removeItem('selectedTemplate');
+    }
+}
+</script>
+{% endblock %}

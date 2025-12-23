@@ -1,0 +1,334 @@
+<!-- templates/signals/dashboard.html -->
+{% extends 'base.html' %}
+
+{% block title %}Signals Dashboard - Supreme AI{% endblock %}
+
+{% block page_title %}Trading Signals Management{% endblock %}
+{% block page_subtitle %}Send professional trading signals to active subscribers{% endblock %}
+
+{% block page_actions %}
+<div class="flex items-center space-x-3">
+    <a href="{% url 'signals:create_signal' %}" 
+       class="btn-gold px-5 py-2.5 rounded-lg font-semibold">
+        <i class="fas fa-plus mr-2"></i>New Signal
+    </a>
+    <a href="{% url 'signals:subscriber_management' %}" 
+       class="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+        <i class="fas fa-users mr-2"></i>Subscribers
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Active Signals -->
+        <div class="stat-card rounded-xl p-6 hover-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Active Signals</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ active_signals }}</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                    <i class="fas fa-bullhorn text-green-600 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
+                    {{ signals_today }} sent today
+                </span>
+            </div>
+        </div>
+
+        <!-- Active Subscribers -->
+        <div class="stat-card rounded-xl p-6 hover-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Active Subscribers</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ active_subscribers }}</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                    <i class="fas fa-users text-blue-600 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-xs text-gray-500">Ready to receive signals</span>
+            </div>
+        </div>
+
+        <!-- Success Rate -->
+        <div class="stat-card rounded-xl p-6 hover-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Success Rate</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ success_rate }}%</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                    <i class="fas fa-trophy text-amber-600 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-xs text-gray-500">Profitable signals</span>
+            </div>
+        </div>
+
+        <!-- Revenue -->
+        <div class="stat-card rounded-xl p-6 hover-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Monthly Revenue</p>
+                    <p class="text-2xl font-bold text-gray-900">${{ monthly_revenue|floatformat:2 }}</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">
+                    <i class="fas fa-dollar-sign text-purple-600 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <span class="text-xs text-gray-500">From subscriptions</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Create Signal -->
+        <a href="{% url 'signals:create_signal' %}" 
+           class="p-6 bg-gradient-to-r from-amber-50 to-white rounded-xl border border-amber-200 hover:border-amber-400 hover:shadow-md transition-all group">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center mr-4">
+                    <i class="fas fa-plus text-white text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 group-hover:text-amber-700">Create New Signal</h3>
+                    <p class="text-sm text-gray-600 mt-1">Send a trading signal to subscribers</p>
+                </div>
+            </div>
+        </a>
+
+        <!-- Bulk Send -->
+        <a href="{% url 'signals:signal_list' %}" 
+           class="p-6 bg-gradient-to-r from-blue-50 to-white rounded-xl border border-blue-200 hover:border-blue-400 hover:shadow-md transition-all group">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-4">
+                    <i class="fas fa-broadcast-tower text-white text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 group-hover:text-blue-700">Send Bulk Signals</h3>
+                    <p class="text-sm text-gray-600 mt-1">Send signals to multiple subscribers</p>
+                </div>
+            </div>
+        </a>
+
+        <!-- Manage Templates -->
+        <a href="{% url 'signals:whatsapp_templates' %}" 
+           class="p-6 bg-gradient-to-r from-green-50 to-white rounded-xl border border-green-200 hover:border-green-400 hover:shadow-md transition-all group">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mr-4">
+                    <i class="fas fa-envelope text-white text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 group-hover:text-green-700">Message Templates</h3>
+                    <p class="text-sm text-gray-600 mt-1">Manage WhatsApp templates</p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Recent Signals & Quick Stats -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Recent Signals -->
+        <div class="lg:col-span-2 bg-white rounded-xl border border-amber-200 shadow-sm">
+            <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-history text-amber-600 mr-2"></i>
+                        Recent Trading Signals
+                    </h3>
+                    <a href="{% url 'signals:signal_list' %}" 
+                       class="text-sm text-amber-600 hover:text-amber-700 font-medium">
+                        View All →
+                    </a>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-amber-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Signal</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Asset</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Sent</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-amber-100">
+                        {% for signal in recent_signals %}
+                        <tr class="hover:bg-amber-50 transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-medium text-gray-900">{{ signal.title }}</div>
+                                <div class="text-xs text-gray-500">{{ signal.signal_id }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if signal.signal_type == 'buy' %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    <i class="fas fa-arrow-up mr-1"></i>BUY
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                    <i class="fas fa-arrow-down mr-1"></i>SELL
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ signal.asset_pair }}</div>
+                                <div class="text-xs text-gray-500">{{ signal.get_market_type_display }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if signal.status == 'sent' %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    Sent
+                                </span>
+                                {% elif signal.status == 'approved' %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                    Approved
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
+                                    {{ signal.get_status_display }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {% if signal.sent_at %}
+                                {{ signal.sent_at|timesince }} ago
+                                {% else %}
+                                Not sent
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center space-x-2">
+                                    <a href="{% url 'signals:signal_detail' signal.pk %}" 
+                                       class="text-amber-600 hover:text-amber-700"
+                                       title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if signal.status == 'approved' %}
+                                    <a href="{% url 'signals:send_bulk_signal' signal.pk %}" 
+                                       class="text-green-600 hover:text-green-700"
+                                       title="Send">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center">
+                                <div class="text-gray-500">
+                                    <i class="fas fa-bullhorn text-gray-400 text-3xl mb-3"></i>
+                                    <p>No signals created yet</p>
+                                    <p class="text-sm mt-2">Create your first trading signal</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="space-y-6">
+            <!-- Market Distribution -->
+            <div class="bg-white rounded-xl border border-amber-200 shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Market Distribution</h3>
+                <div class="space-y-3">
+                    {% for market in market_distribution %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-700">{{ market.market_type__name }}</span>
+                        <span class="text-sm font-medium text-gray-900">{{ market.count }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-amber-500 h-2 rounded-full" 
+                             style="width: {% widthratio market.count total_signals 100 %}%"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Signal Performance -->
+            <div class="bg-white rounded-xl border border-amber-200 shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Signal Performance</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                        <div class="text-2xl font-bold text-green-700">{{ buy_signals }}</div>
+                        <div class="text-xs text-green-600 font-medium">BUY Signals</div>
+                    </div>
+                    <div class="text-center p-3 bg-red-50 rounded-lg border border-red-200">
+                        <div class="text-2xl font-bold text-red-700">{{ sell_signals }}</div>
+                        <div class="text-xs text-red-600 font-medium">SELL Signals</div>
+                    </div>
+                </div>
+                <div class="mt-4 text-center">
+                    <div class="text-xs text-gray-500">Win Rate: {{ win_rate }}%</div>
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="bg-white rounded-xl border border-amber-200 shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
+                <div class="space-y-3">
+                    <a href="{% url 'signals:subscriber_management' %}" 
+                       class="flex items-center p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                        <i class="fas fa-users text-blue-500 mr-3"></i>
+                        <span class="text-sm font-medium text-gray-700">Manage Subscribers</span>
+                    </a>
+                    <a href="{% url 'signals:bulk_jobs_list' %}" 
+                       class="flex items-center p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                        <i class="fas fa-tasks text-green-500 mr-3"></i>
+                        <span class="text-sm font-medium text-gray-700">Bulk Jobs History</span>
+                    </a>
+                    <a href="{% url 'signals:whatsapp_templates' %}" 
+                       class="flex items-center p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                        <i class="fas fa-envelope text-purple-500 mr-3"></i>
+                        <span class="text-sm font-medium text-gray-700">Message Templates</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stat-card {
+    background: linear-gradient(145deg, #ffffff, #fefce8);
+    border: 1px solid #fde68a;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #f59e0b, #3b82f6);
+}
+
+.hover-card {
+    transition: all 0.3s ease;
+}
+
+.hover-card:hover {
+    transform: translateY(-3px);
+    border-color: #f59e0b;
+    box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.1);
+}
+</style>
+
+{% endblock %}

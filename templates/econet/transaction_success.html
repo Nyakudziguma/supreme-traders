@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction Successful - Supreme AI{% endblock %}
+
+{% block page_title %}Transaction Successful!{% endblock %}
+{% block page_subtitle %}Your EcoCash transfer has been processed{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto animate-fade-in">
+    <!-- Success Card -->
+    <div class="bg-white rounded-xl border border-green-200 overflow-hidden shadow-sm">
+        <div class="p-8 text-center">
+            <!-- Success Icon -->
+            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-check-circle text-green-600 text-4xl"></i>
+            </div>
+            
+            <!-- Success Message -->
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">Transfer Successful!</h3>
+            <p class="text-gray-600 mb-6">
+                Your EcoCash transfer has been processed successfully.
+            </p>
+            
+            <!-- Transaction Details -->
+            <div class="bg-gradient-to-r from-green-50 to-white rounded-lg border border-green-200 p-6 mb-6">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Amount:</span>
+                        <span class="text-xl font-bold text-gray-900">${{ transaction.amount }}</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">To:</span>
+                        <span class="font-semibold text-gray-900">{{ transaction.ecash_number }}</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Reference:</span>
+                        <span class="font-mono text-sm text-gray-900">{{ transaction.reference_number }}</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Time:</span>
+                        <span class="text-gray-900">{{ transaction.processed_at|date:"H:i:s" }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="space-y-3">
+                <a href="{% url 'econet:econet_dashboard' %}" 
+                   class="block w-full btn-gold py-3 rounded-lg font-semibold">
+                    <i class="fas fa-home mr-2"></i>Back to Dashboard
+                </a>
+                
+                <a href="{% url 'econet:money_transfer' %}" 
+                   class="block w-full px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-paper-plane mr-2"></i>Make Another Transfer
+                </a>
+                
+                <a href="{% url 'econet:transaction_history' %}" 
+                   class="block w-full px-6 py-3 rounded-lg border border-blue-300 text-blue-600 font-medium hover:bg-blue-50 transition-colors">
+                    <i class="fas fa-history mr-2"></i>View Transaction History
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Important Notes -->
+    <div class="mt-6 p-4 bg-gradient-to-r from-amber-50 to-white rounded-xl border border-amber-200">
+        <h4 class="font-semibold text-gray-900 mb-3 flex items-center">
+            <i class="fas fa-info-circle text-amber-600 mr-2"></i>
+            Important Information
+        </h4>
+        <ul class="text-sm text-gray-700 space-y-2">
+            <li class="flex items-start">
+                <i class="fas fa-check text-green-500 text-xs mt-1 mr-2"></i>
+                <span>Transaction reference has been saved to your history</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-green-500 text-xs mt-1 mr-2"></i>
+                <span>Receipt has been sent to your WhatsApp</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-green-500 text-xs mt-1 mr-2"></i>
+                <span>Keep the reference number for any inquiries</span>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

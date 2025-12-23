@@ -1,0 +1,269 @@
+<!-- templates/switches/edit.html -->
+{% extends 'base.html' %}
+
+{% block title %}{% if is_edit %}Edit Switch{% else %}Add New Switch{% endif %} - Supreme AI{% endblock %}
+
+{% block page_title %}{% if is_edit %}Edit Switch{% else %}Add New Switch{% endif %}{% endblock %}
+{% block page_subtitle %}{% if is_edit %}Update switch settings and messages{% else %}Create a new feature switch{% endif %}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Switch Form -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+        <div class="p-6">
+            <form method="post" action="" id="switchForm">
+                {% csrf_token %}
+                
+                <div class="space-y-6">
+                    <!-- Transaction Type -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-cog text-amber-600 mr-2"></i>
+                            Feature Type *
+                        </label>
+                        <select name="transaction_type" 
+                                required
+                                class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                            <option value="">Select a feature...</option>
+                            {% for value, label in transaction_types %}
+                            <option value="{{ value }}" 
+                                    {% if switch and switch.transaction_type == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Select the feature this switch controls</p>
+                    </div>
+                    
+                    <!-- Off Message -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-toggle-off text-gray-600 mr-2"></i>
+                            Off Message
+                        </label>
+                        <textarea name="off_message" 
+                                  rows="3"
+                                  class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 resize-none"
+                                  placeholder="Message to show when this feature is disabled...">{% if switch %}{{ switch.off_message }}{% endif %}</textarea>
+                        <div class="flex justify-between items-center mt-2">
+                            <p class="text-xs text-gray-500">Shown to users when feature is inactive</p>
+                            <div class="text-xs text-gray-500">
+                                <span id="offCharCount">0</span>/500 characters
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- On Message -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-toggle-on text-green-600 mr-2"></i>
+                            On Message
+                        </label>
+                        <textarea name="on_message" 
+                                  rows="3"
+                                  class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 resize-none"
+                                  placeholder="Message to show when this feature is enabled (optional)...">{% if switch %}{{ switch.on_message }}{% endif %}</textarea>
+                        <div class="flex justify-between items-center mt-2">
+                            <p class="text-xs text-gray-500">Optional welcome message when feature is active</p>
+                            <div class="text-xs text-gray-500">
+                                <span id="onCharCount">0</span>/500 characters
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-eye text-blue-600 mr-2"></i>
+                            Preview
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Off Preview -->
+                            <div class="border-2 border-gray-200 rounded-xl p-4 bg-gray-50">
+                                <div class="flex items-center mb-3">
+                                    <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                                        <i class="fas fa-toggle-off text-gray-600"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-700">When Feature is Off</span>
+                                </div>
+                                <div id="offPreview" class="text-sm text-gray-600">
+                                    {% if switch and switch.off_message %}
+                                    {{ switch.off_message|truncatechars:80 }}
+                                    {% else %}
+                                    No off message set
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- On Preview -->
+                            <div class="border-2 border-green-200 rounded-xl p-4 bg-green-50">
+                                <div class="flex items-center mb-3">
+                                    <div class="w-8 h-8 rounded-full bg-green-200 flex items-center justify-center mr-2">
+                                        <i class="fas fa-toggle-on text-green-600"></i>
+                                    </div>
+                                    <span class="text-sm font-medium text-green-700">When Feature is On</span>
+                                </div>
+                                <div id="onPreview" class="text-sm text-green-600">
+                                    {% if switch and switch.on_message %}
+                                    {{ switch.on_message|truncatechars:80 }}
+                                    {% else %}
+                                    No on message set
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="mt-8 pt-6 border-t border-amber-200">
+                    <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+                        <a href="{% url 'switches:switch_list' %}" 
+                           class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition duration-200 font-medium text-center">
+                            Cancel
+                        </a>
+                        <button type="submit" 
+                                class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition duration-200 font-medium flex items-center justify-center"
+                                id="submitBtn">
+                            <i class="fas fa-save mr-2"></i> {% if is_edit %}Update Switch{% else %}Create Switch{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Switch Examples -->
+    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6">
+        <h4 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+            <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
+            Example Messages
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-white rounded-lg border border-blue-200">
+                <h5 class="font-medium text-gray-900 mb-2">Deposit Feature</h5>
+                <div class="space-y-2 text-sm">
+                    <p><span class="font-medium text-gray-700">Off:</span> 
+                    <span class="text-gray-600">"Deposit service is temporarily unavailable. Please check back later."</span></p>
+                    <p><span class="font-medium text-green-700">On:</span> 
+                    <span class="text-green-600">"Deposit funds securely to start trading!"</span></p>
+                </div>
+            </div>
+            <div class="p-4 bg-white rounded-lg border border-blue-200">
+                <h5 class="font-medium text-gray-900 mb-2">Signals Feature</h5>
+                <div class="space-y-2 text-sm">
+                    <p><span class="font-medium text-gray-700">Off:</span> 
+                    <span class="text-gray-600">"Trading signals are currently under maintenance. We'll be back soon!"</span></p>
+                    <p><span class="font-medium text-green-700">On:</span> 
+                    <span class="text-green-600">"Get real-time trading signals to maximize your profits!"</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Character counters
+    const offMessage = document.querySelector('textarea[name="off_message"]');
+    const onMessage = document.querySelector('textarea[name="on_message"]');
+    const offCharCount = document.getElementById('offCharCount');
+    const onCharCount = document.getElementById('onCharCount');
+    
+    if (offMessage) {
+        offCharCount.textContent = offMessage.value.length;
+        offMessage.addEventListener('input', function() {
+            offCharCount.textContent = this.value.length;
+            if (this.value.length > 500) {
+                offCharCount.classList.add('text-red-600');
+            } else {
+                offCharCount.classList.remove('text-red-600');
+            }
+            updatePreview('off', this.value);
+        });
+    }
+    
+    if (onMessage) {
+        onCharCount.textContent = onMessage.value.length;
+        onMessage.addEventListener('input', function() {
+            onCharCount.textContent = this.value.length;
+            if (this.value.length > 500) {
+                onCharCount.classList.add('text-red-600');
+            } else {
+                onCharCount.classList.remove('text-red-600');
+            }
+            updatePreview('on', this.value);
+        });
+    }
+    
+    // Initialize previews
+    if (offMessage) updatePreview('off', offMessage.value);
+    if (onMessage) updatePreview('on', onMessage.value);
+    
+    // Check for existing switch
+    const typeSelect = document.querySelector('select[name="transaction_type"]');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function() {
+            checkExistingSwitch(this.value);
+        });
+    }
+});
+
+function updatePreview(type, content) {
+    const preview = document.getElementById(type + 'Preview');
+    if (content.trim()) {
+        preview.textContent = content.length > 80 ? content.substring(0, 80) + '...' : content;
+    } else {
+        preview.textContent = 'No ' + type + ' message set';
+    }
+}
+
+function checkExistingSwitch(type) {
+    if (!type) return;
+    
+    fetch(`/switches/api/check/${type}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                const message = `A switch for "${data.type}" already exists. Editing will update the existing switch.`;
+                if (!confirm(message)) {
+                    document.querySelector('select[name="transaction_type"]').value = '';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error checking switch:', error);
+        });
+}
+
+// Form validation
+document.getElementById('switchForm').addEventListener('submit', function(e) {
+    const type = document.querySelector('select[name="transaction_type"]').value;
+    const offMessage = document.querySelector('textarea[name="off_message"]').value;
+    
+    if (!type) {
+        e.preventDefault();
+        alert('Please select a feature type');
+        return;
+    }
+    
+    if (offMessage.length > 500) {
+        e.preventDefault();
+        alert('Off message cannot exceed 500 characters');
+        return;
+    }
+    
+    const onMessage = document.querySelector('textarea[name="on_message"]').value;
+    if (onMessage.length > 500) {
+        e.preventDefault();
+        alert('On message cannot exceed 500 characters');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+});
+</script>
+{% endblock %}

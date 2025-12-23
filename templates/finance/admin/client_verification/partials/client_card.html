@@ -1,0 +1,115 @@
+<!-- templates/finance/admin/client_verification/partials/client_card.html -->
+<div class="bg-white rounded-xl border border-amber-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+    <div class="p-6">
+        <!-- Client Header -->
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br 
+                    {% if client.verified %}from-green-100 to-green-200{% else %}from-yellow-100 to-yellow-200{% endif %}
+                    flex items-center justify-center">
+                    <i class="fas fa-user {% if client.verified %}text-green-600{% else %}text-yellow-600{% endif %}"></i>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-gray-900">{{ client.name }}</h4>
+                    <div class="flex items-center mt-1">
+                        <span class="text-sm text-gray-600">
+                            <i class="fas fa-phone text-amber-500 mr-1"></i>
+                            {{ client.ecocash_number }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                {% if client.verified %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                {% if client.verified %}
+                <i class="fas fa-check-circle mr-1"></i> Verified
+                {% else %}
+                <i class="fas fa-clock mr-1"></i> Unverified
+                {% endif %}
+            </span>
+        </div>
+        
+        <!-- Client Details -->
+        <div class="space-y-3">
+            <div class="flex items-center text-sm text-gray-600">
+                <i class="fas fa-calendar-alt text-blue-500 mr-2 w-5"></i>
+                <span>Added: {{ client.created_at|date:"M d, Y" }}</span>
+            </div>
+            
+            {% if client.verified %}
+            <div class="flex items-center text-sm text-gray-600">
+                <i class="fas fa-user-check text-green-500 mr-2 w-5"></i>
+                <span>Verified by: {{ client.verified_by.username|default:"System" }}</span>
+            </div>
+            
+            <div class="flex items-center text-sm text-gray-600">
+                <i class="fas fa-calendar-check text-green-500 mr-2 w-5"></i>
+                <span>Verified: {{ client.verified_at|date:"M d, Y" }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Document Status -->
+        <div class="mt-4 pt-4 border-t border-amber-100">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs text-gray-500">Documents:</span>
+                    {% if client.national_id_image %}
+                    <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                        <i class="fas fa-id-card mr-1"></i> ID
+                    </span>
+                    {% endif %}
+                    
+                    {% if client.selfie_with_id %}
+                    <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
+                        <i class="fas fa-camera mr-1"></i> Selfie
+                    </span>
+                    {% endif %}
+                    
+                    {% if not client.national_id_image and not client.selfie_with_id %}
+                    <span class="text-xs text-gray-400">No documents</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="mt-4 pt-4 border-t border-amber-100">
+            <div class="flex items-center justify-between">
+                <a href="{% url 'finance:client_verification_detail' client.pk %}" 
+                   class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+                    <i class="fas fa-eye mr-1"></i> View Details
+                </a>
+                
+                <div class="flex items-center space-x-2">
+                    {% if client.verified %}
+                    <form method="post" 
+                          action="{% url 'finance:client_verification_unverify' client.pk %}"
+                          class="inline"
+                          onsubmit="return confirm('Unverify {{ client.name }}?')">
+                        {% csrf_token %}
+                        <button type="submit" 
+                                class="text-yellow-600 hover:text-yellow-800 text-sm font-medium flex items-center"
+                                title="Unverify">
+                            <i class="fas fa-times-circle mr-1"></i> Unverify
+                        </button>
+                    </form>
+                    {% else %}
+                    <form method="post" 
+                          action="{% url 'finance:client_verification_verify' client.pk %}"
+                          class="inline"
+                          onsubmit="return confirm('Verify {{ client.name }}?')">
+                        {% csrf_token %}
+                        <button type="submit" 
+                                class="text-green-600 hover:text-green-800 text-sm font-medium flex items-center"
+                                title="Verify">
+                            <i class="fas fa-check-circle mr-1"></i> Verify
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

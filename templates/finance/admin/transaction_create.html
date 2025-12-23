@@ -1,3 +1,4 @@
+<!-- templates/finance/admin/transaction_create.html -->
 {% extends 'base.html' %}
 
 {% block title %}Create Transaction - Supreme AI{% endblock %}
@@ -7,166 +8,710 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-teal-900">Create New Transaction</h1>
-            <p class="text-gray-600 mt-2">Create a new EcoCash transaction manually</p>
+            <h1 class="text-3xl font-bold text-amber-900">Create New Transaction</h1>
+            <p class="text-amber-700 mt-2">Create and process a new EcoCash transaction manually</p>
         </div>
         <div>
             <a href="{% url 'finance:admin_transaction_list' %}" 
-               class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
+               class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition duration-200 font-medium shadow-sm">
                 ← Back to List
             </a>
         </div>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-lg p-6">
-        <form method="post">
+    <!-- Transaction Processing Status -->
+    {% if processing %}
+    <div id="processingModal" class="fixed inset-0 bg-amber-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-gradient-to-br from-amber-50 to-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-amber-200">
+            <div class="text-center">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-r from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-4 shadow-inner">
+                    <i class="fas fa-sync-alt fa-spin text-amber-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-amber-900 mb-2">Processing Transaction</h3>
+                <p class="text-amber-700 mb-4">Please wait while we process your transaction...</p>
+                <div class="space-y-2 text-sm text-left">
+                    <div class="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
+                        <span class="text-amber-800">Fetching Deriv details</span>
+                        <span id="step1" class="text-amber-600">
+                            <i class="fas fa-circle-notch fa-spin"></i>
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
+                        <span class="text-amber-800">Verifying names</span>
+                        <span id="step2" class="text-amber-400">
+                            <i class="fas fa-clock"></i>
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
+                        <span class="text-amber-800">Processing transfer</span>
+                        <span id="step3" class="text-amber-400">
+                            <i class="fas fa-clock"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Form -->
+    <div class="bg-gradient-to-br from-amber-50 to-white rounded-2xl shadow-lg p-6 border border-amber-200">
+        <form id="transactionForm" method="post" action="{% url 'finance:admin_transaction_create' %}">
             {% csrf_token %}
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Left Column -->
-                <div class="space-y-4">
-                    <div>
-                        <label for="{{ form.user.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                <div class="space-y-6">
+                    <!-- User Field -->
+                    <div class="relative group">
+                        <label for="{{ form.user.id_for_label }}" class="block text-sm font-semibold text-amber-800 mb-2">
+                            <i class="fas fa-user-circle mr-2 text-amber-600"></i>
                             User *
                         </label>
-                        {{ form.user }}
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-amber-500"></i>
+                            </div>
+                            {{ form.user }}
+                        </div>
                         {% if form.user.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.user.errors }}</p>
+                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>{{ form.user.errors }}
+                        </p>
                         {% endif %}
                     </div>
 
-                    <div>
-                        <label for="{{ form.transaction_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <!-- Transaction Type -->
+                    <div class="relative group">
+                        <label class="block text-sm font-semibold text-amber-800 mb-2">
+                            <i class="fas fa-exchange-alt mr-2 text-amber-600"></i>
                             Transaction Type *
                         </label>
-                        {{ form.transaction_type }}
-                        {% if form.transaction_type.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.transaction_type.errors }}</p>
-                        {% endif %}
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-wallet text-amber-500"></i>
+                            </div>
+                            <select id="transaction_type" name="transaction_type" 
+                                    class="w-full pl-10 pr-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 bg-white shadow-sm">
+                                <option value="deposit" selected>Deposit</option>
+                                <option value="withdrawal">Withdrawal</option>
+                                <option value="transfer">Transfer</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div>
-                        <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            Amount *
+                    <!-- Amount Field -->
+                    <div class="relative group">
+                        <label for="{{ form.amount.id_for_label }}" class="block text-sm font-semibold text-amber-800 mb-2">
+                            <i class="fas fa-money-bill-wave mr-2 text-amber-600"></i>
+                            Total Amount (USD) *
                         </label>
-                        {{ form.amount }}
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-amber-600 font-bold">$</span>
+                            </div>
+                            <input type="number" 
+                                   id="{{ form.amount.id_for_label }}" 
+                                   name="{{ form.amount.name }}" 
+                                   step="0.01"
+                                   class="w-full pl-10 pr-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 bg-white shadow-sm"
+                                   placeholder="0.00">
+                        </div>
+                        <div class="mt-3 grid grid-cols-2 gap-3">
+                            <div class="p-3 bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg border border-amber-200">
+                                <div class="text-xs text-amber-700 mb-1">Net Amount</div>
+                                <div id="netAmountDisplay" class="text-lg font-bold text-amber-900">$0.00</div>
+                            </div>
+                            <div class="p-3 bg-gradient-to-r from-amber-50 to-amber-100 rounded-lg border border-amber-200">
+                                <div class="text-xs text-amber-700 mb-1">Charge</div>
+                                <div id="chargeDisplay" class="text-lg font-bold text-amber-900">$0.00</div>
+                            </div>
+                        </div>
                         {% if form.amount.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.amount.errors }}</p>
+                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>{{ form.amount.errors }}
+                        </p>
                         {% endif %}
                     </div>
 
-                    <div>
-                        <label for="{{ form.currency.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <!-- Currency Field -->
+                    <div class="relative group">
+                        <label for="{{ form.currency.id_for_label }}" class="block text-sm font-semibold text-amber-800 mb-2">
+                            <i class="fas fa-globe mr-2 text-amber-600"></i>
                             Currency *
                         </label>
-                        {{ form.currency }}
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-flag text-amber-500"></i>
+                            </div>
+                            {{ form.currency }}
+                        </div>
                         {% if form.currency.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.currency.errors }}</p>
+                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>{{ form.currency.errors }}
+                        </p>
                         {% endif %}
                     </div>
                 </div>
 
                 <!-- Right Column -->
-                <div class="space-y-4">
-                    <div>
-                        <label for="{{ form.deriv_account_number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                <div class="space-y-6">
+                    <!-- Deriv Account Number -->
+                    <div class="relative group">
+                        <label for="{{ form.deriv_account_number.id_for_label }}" class="block text-sm font-semibold text-amber-800 mb-2">
+                            <i class="fas fa-building mr-2 text-amber-600"></i>
                             Deriv Account Number *
                         </label>
-                        {{ form.deriv_account_number }}
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="font-mono text-amber-600 font-bold">CR</span>
+                            </div>
+                            <input type="text" 
+                                   id="{{ form.deriv_account_number.id_for_label }}" 
+                                   name="{{ form.deriv_account_number.name }}" 
+                                   class="w-full pl-10 pr-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 bg-white shadow-sm font-mono"
+                                   placeholder="0000000">
+                        </div>
                         {% if form.deriv_account_number.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.deriv_account_number.errors }}</p>
+                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>{{ form.deriv_account_number.errors }}
+                        </p>
                         {% endif %}
                     </div>
 
-                    <div>
-                        <label for="{{ form.ecocash_number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <!-- EcoCash Number -->
+                    <div class="relative group">
+                        <label for="{{ form.ecocash_number.id_for_label }}" class="block text-sm font-semibold text-amber-800 mb-2">
+                            <i class="fas fa-mobile-alt mr-2 text-amber-600"></i>
                             EcoCash Number *
                         </label>
-                        {{ form.ecocash_number }}
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-phone text-amber-500"></i>
+                            </div>
+                            <input type="text" 
+                                   id="{{ form.ecocash_number.id_for_label }}" 
+                                   name="{{ form.ecocash_number.name }}" 
+                                   class="w-full pl-10 pr-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 bg-white shadow-sm"
+                                   placeholder="077XXXXXXX">
+                            <button type="button" 
+                                    onclick="verifyEcoCashNumber()"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <span class="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm rounded-lg hover:from-amber-600 hover:to-amber-700 transition duration-200 shadow-sm">
+                                    <i class="fas fa-check mr-1"></i> Verify
+                                </span>
+                            </button>
+                        </div>
+                        <div id="ecocashVerificationResult" class="mt-2 hidden"></div>
                         {% if form.ecocash_number.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.ecocash_number.errors }}</p>
+                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>{{ form.ecocash_number.errors }}
+                        </p>
                         {% endif %}
                     </div>
 
-                    <div>
-                        <label for="{{ form.ecocash_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <!-- EcoCash Name -->
+                    <div class="relative group">
+                        <label for="{{ form.ecocash_name.id_for_label }}" class="block text-sm font-semibold text-amber-800 mb-2">
+                            <i class="fas fa-user-tag mr-2 text-amber-600"></i>
                             EcoCash Name *
                         </label>
-                        {{ form.ecocash_name }}
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-id-card text-amber-500"></i>
+                            </div>
+                            {{ form.ecocash_name }}
+                        </div>
                         {% if form.ecocash_name.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.ecocash_name.errors }}</p>
+                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>{{ form.ecocash_name.errors }}
+                        </p>
                         {% endif %}
                     </div>
 
-                    <div>
-                        <label for="{{ form.charge.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            Charge
+                    <!-- Charge Field -->
+                    <div class="relative group">
+                        <label for="{{ form.charge.id_for_label }}" class="block text-sm font-semibold text-amber-800 mb-2">
+                            <i class="fas fa-percentage mr-2 text-amber-600"></i>
+                            Charge (Auto-calculated)
                         </label>
-                        {{ form.charge }}
-                        <p class="mt-1 text-sm text-gray-500">Automatically calculated based on amount</p>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-amber-600 font-bold">$</span>
+                            </div>
+                            {{ form.charge }}
+                        </div>
+                        <p class="mt-2 text-sm text-amber-600 flex items-center">
+                            <i class="fas fa-info-circle mr-2"></i>Automatically calculated based on amount
+                        </p>
                         {% if form.charge.errors %}
-                        <p class="mt-1 text-sm text-red-600">{{ form.charge.errors }}</p>
+                        <p class="mt-2 text-sm text-red-600 flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>{{ form.charge.errors }}
+                        </p>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
             <!-- Full Width Fields -->
-            <div class="mt-6 space-y-4">
-                <div>
-                    <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        Status
+            <div class="mt-8 space-y-6">
+                <!-- Status Field -->
+                <div class="relative group">
+                    <label for="{{ form.status.id_for_label }}" class="block text-sm font-semibold text-amber-800 mb-2">
+                        <i class="fas fa-tasks mr-2 text-amber-600"></i>
+                        Initial Status
                     </label>
-                    {{ form.status }}
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-flag text-amber-500"></i>
+                        </div>
+                        <select id="{{ form.status.id_for_label }}" 
+                                name="{{ form.status.name }}" 
+                                class="w-full pl-10 pr-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 bg-white shadow-sm">
+                            <option value="pending" selected>Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="completed">Completed</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
                     {% if form.status.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ form.status.errors }}</p>
+                    <p class="mt-2 text-sm text-red-600 flex items-center">
+                        <i class="fas fa-exclamation-circle mr-2"></i>{{ form.status.errors }}
+                    </p>
                     {% endif %}
                 </div>
 
-                <div>
-                    <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        Description
+                <!-- Description Field -->
+                <div class="relative group">
+                    <label for="{{ form.description.id_for_label }}" class="block text-sm font-semibold text-amber-800 mb-2">
+                        <i class="fas fa-file-alt mr-2 text-amber-600"></i>
+                        Description / Notes
                     </label>
-                    {{ form.description }}
+                    <div class="relative">
+                        <div class="absolute top-3 left-3">
+                            <i class="fas fa-comment-dots text-amber-500"></i>
+                        </div>
+                        <textarea id="{{ form.description.id_for_label }}" 
+                                  name="{{ form.description.name }}" 
+                                  rows="4"
+                                  class="w-full pl-10 pr-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 bg-white shadow-sm resize-none"
+                                  placeholder="Add any additional notes or description for this transaction..."></textarea>
+                    </div>
                     {% if form.description.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ form.description.errors }}</p>
+                    <p class="mt-2 text-sm text-red-600 flex items-center">
+                        <i class="fas fa-exclamation-circle mr-2"></i>{{ form.description.errors }}
+                    </p>
                     {% endif %}
                 </div>
             </div>
 
+            <!-- Transaction Preview -->
+            <div id="transactionPreview" class="mt-8 p-6 bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl border-2 border-amber-300 hidden shadow-inner">
+                <h4 class="font-semibold text-amber-900 mb-4 flex items-center">
+                    <i class="fas fa-eye mr-2 text-amber-600"></i>
+                    Transaction Preview
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="p-4 bg-white rounded-lg border border-amber-200 shadow-sm">
+                        <div class="text-xs text-amber-600 mb-1">Net Amount</div>
+                        <div id="previewNetAmount" class="text-xl font-bold text-amber-900">$0.00</div>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg border border-amber-200 shadow-sm">
+                        <div class="text-xs text-amber-600 mb-1">Charge</div>
+                        <div id="previewCharge" class="text-xl font-bold text-amber-900">$0.00</div>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg border border-amber-200 shadow-sm">
+                        <div class="text-xs text-amber-600 mb-1">Total Paid</div>
+                        <div id="previewTotalAmount" class="text-xl font-bold text-amber-900">$0.00</div>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg border border-amber-200 shadow-sm">
+                        <div class="text-xs text-amber-600 mb-1">Deriv Account</div>
+                        <div id="previewDerivAccount" class="text-lg font-mono font-bold text-amber-900 truncate"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Form Actions -->
-            <div class="mt-8 flex justify-end space-x-3">
-                <a href="{% url 'finance:admin_transaction_list' %}" 
-                   class="bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
-                    Cancel
-                </a>
-                <button type="submit" 
-                        class="bg-amber text-white px-6 py-3 rounded-lg hover:bg-gold transition duration-200 font-medium">
-                    Create Transaction
-                </button>
+            <div class="mt-8 pt-6 border-t border-amber-200">
+                <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+                    <a href="{% url 'finance:admin_transaction_list' %}" 
+                       class="px-6 py-3 bg-gradient-to-r from-amber-200 to-amber-300 text-amber-900 rounded-xl hover:from-amber-300 hover:to-amber-400 transition duration-200 font-medium shadow-sm border border-amber-400 text-center">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </a>
+                    <button type="button" 
+                            onclick="previewTransaction()"
+                            class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition duration-200 font-medium shadow-sm">
+                        <i class="fas fa-eye mr-2"></i>Preview Transaction
+                    </button>
+                    <button type="submit" 
+                            id="submitBtn"
+                            class="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl hover:from-amber-600 hover:to-amber-700 transition duration-200 font-medium shadow-sm">
+                        <i class="fas fa-paper-plane mr-2"></i>Create & Process Transaction
+                    </button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
+<style>
+    /* Custom form field styles */
+    .form-select, .form-control, input[type="text"], input[type="number"], select, textarea {
+        @apply w-full pl-10 pr-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 bg-white shadow-sm;
+    }
+
+    .form-select:focus, .form-control:focus, input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+        @apply shadow-amber-200 shadow-md;
+    }
+
+    .form-select option {
+        @apply py-2 px-4 hover:bg-amber-100;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        @apply bg-amber-100 rounded-full;
+    }
+    ::-webkit-scrollbar-thumb {
+        @apply bg-amber-400 rounded-full hover:bg-amber-500;
+    }
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const amountField = document.getElementById('{{ form.amount.id_for_label }}');
     const chargeField = document.getElementById('{{ form.charge.id_for_label }}');
+    const ecocashNumberField = document.getElementById('{{ form.ecocash_number.id_for_label }}');
     
     // Auto-calculate charge when amount changes
-    amountField.addEventListener('change', function() {
-        const amount = parseFloat(this.value);
+    amountField.addEventListener('input', function() {
+        calculateNetAndCharge();
+    });
+    
+    // Calculate net amount and charge
+    function calculateNetAndCharge() {
+        const amount = parseFloat(amountField.value);
         if (amount && !isNaN(amount)) {
+            // Show loading animation
+            document.getElementById('netAmountDisplay').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            document.getElementById('chargeDisplay').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
             fetch(`/finance/api/calculate-charge/?amount=${amount}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.charge) {
+                    if (data.net_amount && data.charge) {
                         chargeField.value = data.charge;
+                        
+                        // Update displays with animation
+                        animateNumber('netAmountDisplay', parseFloat(data.net_amount));
+                        animateNumber('chargeDisplay', parseFloat(data.charge));
                     }
+                })
+                .catch(error => {
+                    document.getElementById('netAmountDisplay').textContent = '$0.00';
+                    document.getElementById('chargeDisplay').textContent = '$0.00';
                 });
+        } else {
+            document.getElementById('netAmountDisplay').textContent = '$0.00';
+            document.getElementById('chargeDisplay').textContent = '$0.00';
         }
+    }
+    
+    // Animate number changes
+    function animateNumber(elementId, finalValue) {
+        const element = document.getElementById(elementId);
+        const currentValue = parseFloat(element.textContent.replace('$', '')) || 0;
+        const duration = 500;
+        const startTime = Date.now();
+        
+        function updateNumber() {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+            
+            const current = currentValue + (finalValue - currentValue) * easedProgress;
+            element.textContent = `$${current.toFixed(2)}`;
+            
+            if (progress < 1) {
+                requestAnimationFrame(updateNumber);
+            }
+        }
+        
+        updateNumber();
+    }
+    
+    // Verify EcoCash number
+    function verifyEcoCashNumber() {
+        const ecocashNumber = ecocashNumberField.value.trim();
+        if (!ecocashNumber) {
+            showToast('Please enter an EcoCash number', 'warning');
+            return;
+        }
+        
+        const resultDiv = document.getElementById('ecocashVerificationResult');
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `
+            <div class="p-3 bg-amber-50 border border-amber-300 rounded-lg animate-pulse">
+                <div class="flex items-center text-amber-700">
+                    <i class="fas fa-sync fa-spin mr-2"></i>
+                    Verifying EcoCash number...
+                </div>
+            </div>
+        `;
+        
+        fetch(`/finance/api/verify-ecocash/?number=${ecocashNumber}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.verified) {
+                    resultDiv.innerHTML = `
+                        <div class="p-3 bg-gradient-to-r from-green-50 to-green-100 border border-green-300 rounded-lg">
+                            <div class="flex items-center text-green-700">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                <span class="font-medium">${data.message}</span>
+                            </div>
+                            ${data.name ? `
+                            <div class="mt-2 pl-6 text-green-600">
+                                <i class="fas fa-user mr-2"></i>
+                                Registered name: <span class="font-semibold">${data.name}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+                    
+                    // Auto-fill the name if available
+                    if (data.name && !document.getElementById('{{ form.ecocash_name.id_for_label }}').value) {
+                        document.getElementById('{{ form.ecocash_name.id_for_label }}').value = data.name;
+                        showToast('EcoCash name auto-filled from verification', 'success');
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="p-3 bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-300 rounded-lg">
+                            <div class="flex items-center text-yellow-700">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                ${data.message || 'Number not found in verification records'}
+                            </div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `
+                    <div class="p-3 bg-gradient-to-r from-red-50 to-red-100 border border-red-300 rounded-lg">
+                        <div class="flex items-center text-red-700">
+                            <i class="fas fa-times-circle mr-2"></i>
+                            Verification failed. Please try again.
+                        </div>
+                    </div>
+                `;
+            });
+    }
+    
+    // Preview transaction
+    function previewTransaction() {
+        const amount = parseFloat(amountField.value) || 0;
+        const charge = parseFloat(chargeField.value) || 0;
+        const netAmount = amount - charge;
+        const derivAccount = document.getElementById('{{ form.deriv_account_number.id_for_label }}').value;
+        
+        if (!amount) {
+            showToast('Please enter an amount', 'warning');
+            return;
+        }
+        
+        if (!derivAccount) {
+            showToast('Please enter a Deriv account number', 'warning');
+            return;
+        }
+        
+        // Format deriv account
+        let formattedAccount = derivAccount;
+        if (!derivAccount.toUpperCase().startsWith('CR')) {
+            formattedAccount = 'CR' + derivAccount;
+        }
+        
+        document.getElementById('previewNetAmount').textContent = `$${netAmount.toFixed(2)}`;
+        document.getElementById('previewCharge').textContent = `$${charge.toFixed(2)}`;
+        document.getElementById('previewTotalAmount').textContent = `$${amount.toFixed(2)}`;
+        document.getElementById('previewDerivAccount').textContent = formattedAccount;
+        
+        const previewDiv = document.getElementById('transactionPreview');
+        previewDiv.classList.remove('hidden');
+        previewDiv.classList.add('animate-fade-in');
+        
+        // Scroll to preview
+        previewDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        showToast('Transaction preview generated', 'success');
+    }
+    
+    // Toggle transaction fields based on type
+    function toggleTransactionFields() {
+        const type = document.getElementById('transaction_type').value;
+        // You can add logic here to show/hide fields based on transaction type
+    }
+    
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        const colors = {
+            'success': 'bg-gradient-to-r from-green-500 to-green-600',
+            'warning': 'bg-gradient-to-r from-yellow-500 to-yellow-600',
+            'error': 'bg-gradient-to-r from-red-500 to-red-600',
+            'info': 'bg-gradient-to-r from-amber-500 to-amber-600'
+        };
+        
+        toast.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-xl shadow-lg z-50 animate-slide-in`;
+        toast.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} mr-3"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.classList.add('animate-fade-out');
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+    
+    // Handle form submission
+    document.getElementById('transactionForm').addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        submitBtn.classList.add('opacity-75');
+        
+        // Show processing modal
+        const modal = document.createElement('div');
+        modal.id = 'processingModal';
+        modal.className = 'fixed inset-0 bg-amber-900 bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="bg-gradient-to-br from-amber-50 to-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-amber-200">
+                <div class="text-center">
+                    <div class="w-16 h-16 rounded-full bg-gradient-to-r from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-4 shadow-inner">
+                        <i class="fas fa-sync-alt fa-spin text-amber-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-amber-900 mb-2">Processing Transaction</h3>
+                    <p class="text-amber-700 mb-4">Please wait while we process your transaction...</p>
+                    <div class="space-y-2 text-sm text-left">
+                        <div class="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
+                            <span class="text-amber-800">Fetching Deriv details</span>
+                            <span id="step1" class="text-amber-600">
+                                <i class="fas fa-circle-notch fa-spin"></i>
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
+                            <span class="text-amber-800">Verifying names</span>
+                            <span id="step2" class="text-amber-400">
+                                <i class="fas fa-clock"></i>
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-amber-50 rounded-lg">
+                            <span class="text-amber-800">Processing transfer</span>
+                            <span id="step3" class="text-amber-400">
+                                <i class="fas fa-clock"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Simulate step updates (remove this in production)
+        let step = 1;
+        const interval = setInterval(() => {
+            document.getElementById(`step${step}`).innerHTML = '<i class="fas fa-check text-green-500"></i>';
+            step++;
+            if (step > 3) {
+                clearInterval(interval);
+            }
+        }, 1000);
+        
+        // The form will submit normally
+    });
+    
+    // Calculate on page load if amount is pre-filled
+    if (amountField.value) {
+        calculateNetAndCharge();
+    }
+    
+    // Add input formatting for EcoCash number
+    ecocashNumberField.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 0) {
+            if (!value.startsWith('263') && value.length > 9) {
+                value = '263' + value.slice(-9);
+            }
+            e.target.value = value;
+        }
+    });
+    
+    // Add input formatting for Deriv account
+    const derivAccountField = document.getElementById('{{ form.deriv_account_number.id_for_label }}');
+    derivAccountField.addEventListener('input', function(e) {
+        let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (value.startsWith('CR')) {
+            value = 'CR' + value.slice(2);
+        }
+        e.target.value = value;
     });
 });
 </script>
+
+<!-- Animation styles -->
+<style>
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+.animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.animate-fade-out {
+    animation: fadeOut 0.3s ease-out;
+}
+</style>
 {% endblock %}

@@ -1,0 +1,338 @@
+<!-- templates/marketing/campaign_detail.html -->
+{% extends 'base.html' %}
+
+{% block title %}{{ campaign.title }} - Supreme AI{% endblock %}
+
+{% block page_title %}{{ campaign.title }}{% endblock %}
+{% block page_subtitle %}Campaign Details & Performance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Campaign Header -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+        <div class="p-6">
+            <div class="flex flex-col md:flex-row md:items-start justify-between mb-6">
+                <div class="flex-1">
+                    <div class="flex items-center flex-wrap gap-3 mb-4">
+                        <h1 class="text-2xl font-bold text-gray-900">{{ campaign.title }}</h1>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                                {% if campaign.status == 'sent' %}bg-green-100 text-green-800
+                                {% elif campaign.status == 'scheduled' %}bg-blue-100 text-blue-800
+                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {% if campaign.status == 'sent' %}
+                                <i class="fas fa-check-circle mr-1"></i> Sent
+                                {% elif campaign.status == 'scheduled' %}
+                                <i class="fas fa-clock mr-1"></i> Scheduled
+                                {% else %}
+                                <i class="fas fa-edit mr-1"></i> Draft
+                                {% endif %}
+                            </span>
+                            
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                                {{ campaign.get_message_type_display }}
+                            </span>
+                            
+                            {% if campaign.is_active %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-play-circle mr-1"></i> Active
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div class="flex items-center">
+                            <i class="fas fa-users text-amber-500 w-5 mr-2"></i>
+                            <span>Audience: {{ campaign.get_audience_type_display }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="far fa-calendar text-blue-500 w-5 mr-2"></i>
+                            <span>Created: {{ campaign.created_at|date:"M d, Y H:i" }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-user-edit text-green-500 w-5 mr-2"></i>
+                            <span>By: {{ campaign.created_by.username }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Campaign Image -->
+                {% if campaign.image %}
+                <div class="mt-4 md:mt-0 md:ml-6">
+                    <div class="w-32 h-32 rounded-lg overflow-hidden border border-amber-200">
+                        <img src="{{ campaign.image.url }}" alt="{{ campaign.title }}" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Campaign Actions -->
+            <div class="flex flex-wrap gap-3">
+                {% if not campaign.is_sent %}
+                <form method="post" 
+                      action="{% url 'marketing:campaign_send' campaign.pk %}"
+                      onsubmit="return confirm('Send this campaign to {{ campaign.get_audience_count }} users?')">
+                    {% csrf_token %}
+                    <button type="submit" 
+                            class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition duration-200 font-medium flex items-center">
+                        <i class="fas fa-paper-plane mr-2"></i> Send Now
+                    </button>
+                </form>
+                
+                <a href="{% url 'marketing:campaign_edit' campaign.pk %}" 
+                   class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition duration-200 font-medium flex items-center">
+                    <i class="fas fa-edit mr-2"></i> Edit Campaign
+                </a>
+                {% endif %}
+                
+                <a href="{% url 'marketing:campaign_list' %}" 
+                   class="px-4 py-2 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition duration-200 font-medium flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to List
+                </a>
+                
+                <form method="post" 
+                      action="{% url 'marketing:campaign_delete' campaign.pk %}"
+                      class="inline"
+                      onsubmit="return confirm('Delete this campaign? This action cannot be undone.')">
+                    {% csrf_token %}
+                    <button type="submit" 
+                            class="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition duration-200 font-medium flex items-center">
+                        <i class="fas fa-trash mr-2"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Stats -->
+    {% if campaign.is_sent %}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Sent -->
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+            <div class="text-center">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-paper-plane text-blue-600"></i>
+                </div>
+                <p class="text-2xl font-bold text-blue-900">{{ campaign.total_sent }}</p>
+                <p class="text-sm text-blue-700 mt-1">Messages Sent</p>
+            </div>
+        </div>
+        
+        <!-- Delivered -->
+        <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+            <div class="text-center">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-check-circle text-green-600"></i>
+                </div>
+                <p class="text-2xl font-bold text-green-900">{{ campaign.total_delivered }}</p>
+                <p class="text-sm text-green-700 mt-1">Delivered</p>
+                <p class="text-xs text-green-600 mt-1">
+                    {{ metrics.delivery_rate|floatformat:1 }}% delivery rate
+                </p>
+            </div>
+        </div>
+        
+        <!-- Open Rate -->
+        <div class="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
+            <div class="text-center">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-eye text-amber-600"></i>
+                </div>
+                <p class="text-2xl font-bold text-amber-900">{{ campaign.open_rate|floatformat:1 }}%</p>
+                <p class="text-sm text-amber-700 mt-1">Open Rate</p>
+                <p class="text-xs text-amber-600 mt-1">
+                    {{ campaign.total_read }} opens
+                </p>
+            </div>
+        </div>
+        
+        <!-- Click Rate -->
+        <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+            <div class="text-center">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-mouse-pointer text-purple-600"></i>
+                </div>
+                <p class="text-2xl font-bold text-purple-900">{{ campaign.click_rate|floatformat:1 }}%</p>
+                <p class="text-sm text-purple-700 mt-1">Click Rate</p>
+                <p class="text-xs text-purple-600 mt-1">
+                    {{ campaign.total_clicks }} clicks
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Campaign Content -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <h3 class="text-lg font-semibold text-gray-900">
+                <i class="fas fa-file-alt text-amber-600 mr-2"></i>
+                Campaign Content
+            </h3>
+        </div>
+        
+        <div class="p-6">
+            <!-- Message Preview -->
+            <div class="mb-6">
+                <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-6">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <pre class="text-gray-800 whitespace-pre-wrap font-mono">{{ campaign.content }}</pre>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Campaign Details -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Timing Information -->
+                <div class="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                    <h4 class="font-semibold text-blue-900 mb-3 flex items-center">
+                        <i class="fas fa-clock text-blue-600 mr-2"></i>
+                        Timing Information
+                    </h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-blue-700">Created:</span>
+                            <span class="font-medium">{{ campaign.created_at|date:"M d, Y H:i" }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-blue-700">Last Updated:</span>
+                            <span class="font-medium">{{ campaign.updated_at|date:"M d, Y H:i" }}</span>
+                        </div>
+                        {% if campaign.scheduled_for %}
+                        <div class="flex justify-between">
+                            <span class="text-blue-700">Scheduled For:</span>
+                            <span class="font-medium">{{ campaign.scheduled_for|date:"M d, Y H:i" }}</span>
+                        </div>
+                        {% endif %}
+                        {% if campaign.sent_at %}
+                        <div class="flex justify-between">
+                            <span class="text-blue-700">Sent At:</span>
+                            <span class="font-medium">{{ campaign.sent_at|date:"M d, Y H:i" }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Audience Information -->
+                <div class="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                    <h4 class="font-semibold text-green-900 mb-3 flex items-center">
+                        <i class="fas fa-users text-green-600 mr-2"></i>
+                        Audience Information
+                    </h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-green-700">Target Audience:</span>
+                            <span class="font-medium">{{ campaign.get_audience_type_display }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-green-700">Estimated Size:</span>
+                            <span class="font-medium">{{ metrics.audience_count }} users</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-green-700">Message Type:</span>
+                            <span class="font-medium">{{ campaign.get_message_type_display }}</span>
+                        </div>
+                        {% if campaign.attachment %}
+                        <div class="flex justify-between">
+                            <span class="text-green-700">Attachment:</span>
+                            <a href="{{ campaign.attachment.url }}" 
+                               class="font-medium text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-download mr-1"></i> Download
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Timeline -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <h3 class="text-lg font-semibold text-gray-900">
+                <i class="fas fa-history text-amber-600 mr-2"></i>
+                Campaign Timeline
+            </h3>
+        </div>
+        
+        <div class="p-6">
+            <div class="relative pl-8">
+                <!-- Timeline line -->
+                <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-amber-200"></div>
+                
+                <!-- Timeline items -->
+                <div class="space-y-6">
+                    <!-- Created -->
+                    <div class="relative">
+                        <div class="absolute left-0 w-8 h-8 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center -translate-x-1/2">
+                            <i class="fas fa-plus text-green-600"></i>
+                        </div>
+                        <div class="ml-10">
+                            <h4 class="font-medium text-gray-900">Campaign Created</h4>
+                            <p class="text-sm text-gray-600 mt-1">{{ campaign.created_at|date:"M d, Y H:i" }}</p>
+                            <p class="text-sm text-gray-600">By {{ campaign.created_by.username }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Scheduled (if applicable) -->
+                    {% if campaign.scheduled_for %}
+                    <div class="relative">
+                        <div class="absolute left-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center -translate-x-1/2">
+                            <i class="fas fa-clock text-blue-600"></i>
+                        </div>
+                        <div class="ml-10">
+                            <h4 class="font-medium text-gray-900">Scheduled for Delivery</h4>
+                            <p class="text-sm text-gray-600 mt-1">{{ campaign.scheduled_for|date:"M d, Y H:i" }}</p>
+                            <p class="text-sm text-gray-600">Will be sent automatically</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Sent (if applicable) -->
+                    {% if campaign.is_sent %}
+                    <div class="relative">
+                        <div class="absolute left-0 w-8 h-8 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center -translate-x-1/2">
+                            <i class="fas fa-paper-plane text-green-600"></i>
+                        </div>
+                        <div class="ml-10">
+                            <h4 class="font-medium text-gray-900">Campaign Sent</h4>
+                            <p class="text-sm text-gray-600 mt-1">{{ campaign.sent_at|date:"M d, Y H:i" }}</p>
+                            <p class="text-sm text-gray-600">
+                                Sent to {{ campaign.total_sent }} users, {{ campaign.total_delivered }} delivered
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Last Updated -->
+                    {% if campaign.updated_at != campaign.created_at %}
+                    <div class="relative">
+                        <div class="absolute left-0 w-8 h-8 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center -translate-x-1/2">
+                            <i class="fas fa-edit text-amber-600"></i>
+                        </div>
+                        <div class="ml-10">
+                            <h4 class="font-medium text-gray-900">Last Updated</h4>
+                            <p class="text-sm text-gray-600 mt-1">{{ campaign.updated_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline-dot {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .timeline-content {
+        position: relative;
+        z-index: 1;
+    }
+</style>
+{% endblock %}

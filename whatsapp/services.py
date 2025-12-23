@@ -16,7 +16,7 @@ import re
 import uuid
 from datetime import datetime
 import asyncio
-
+from datetime import timedelta
 
 class WhatsAppService:
     def __init__(self):
@@ -25,6 +25,7 @@ class WhatsAppService:
         self.ocr_service = EcoCashOCRService()
         self.sms_url = settings.SMS_API_URL
         self.sms_auth = (settings.SMS_API_USER, settings.SMS_API_PASSWORD)
+        self.deriv_app_id = settings.DERIV_APP_ID
     
     def send_message(self, phone_number, message):
         headers = {"Authorization": self.api_token}
@@ -53,11 +54,11 @@ class WhatsAppService:
                         "text": ''
                     },
                     "body": {
-                        "text": "👋 Welcome to Supreme Traders I’m Supreme AI, your virtual assistant 🤖. \nTap The Supreme Menu button below to explore your options."
+                        "text": "👋 Welcome to Supreme Traders I’m Supreme AI, your virtual assistant 🤖. \n\nTap The Supreme Menu button below to explore your options."
                     },
                     "action":
                         {
-                            "button": "🏠 Menu Options",
+                            "button": "🏠 Supreme Menu",
                             "sections": [
                                 {
                                     "title": "Options",
@@ -67,7 +68,7 @@ class WhatsAppService:
                                             "title": "💸 Deriv Deposits",
                                         },
                                         {
-                                            "id": "deriv_withdrawals",
+                                            "id": "withdraw",
                                             "title": "🏧 Deriv Withdrawals",
                                         },
                                         {
@@ -102,6 +103,141 @@ class WhatsAppService:
         response = requests.post(self.api_url, headers=headers, json=payload)
         ans = response.json()
         print(ans)
+        return True
+    
+    def deriv_authentication(self, phone_number, message):
+        headers = {"Authorization": self.api_token}
+        payload = {"messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": phone_number,
+                "type": "interactive",
+                "interactive": {
+                        "type": "cta_url",
+                        "body": {
+                        "text": message
+                        },
+                        "action": {
+                        "name": "cta_url",
+                        "parameters": {
+                            "display_text": "Login",
+                            "url": f"https://oauth.deriv.com/oauth2/authorize?app_id=115043&affiliate_token={phone_number}"
+                        }
+                        }
+                    }
+                    }
+                            
+                
+        response = requests.post(settings.WHATSAPP_URL, headers=headers, json=payload)
+        ans = response.json()
+        return
+
+    def send_signals_message(self, phone_number):
+        from subscriptions.models import SubscriptionPlans
+        headers = {"Authorization": self.api_token}
+        plans = SubscriptionPlans.objects.all()
+        rows = [
+            {
+            "id": plan.id,
+            "title": f"📈 {plan.plan_name} ${plan.price}",
+            }
+            for plan in plans
+        ]
+        
+        payload = {"messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_number,
+            "type": "interactive",
+                "interactive": {
+                "type": "list",
+                "header": {
+                "type": "text",
+                "text": '📊 Trading Signals'
+                },
+                "body": {
+                "text": "Our premium trading signals service provides accurate market insights. \n\nChoose your subscription plan by clicking on the view plans button below."
+                },
+                "footer": {
+                "text": "Terms and Conditions apply."
+                },
+                "action":
+                {
+                    "button": "View Plans",
+                    "sections": [
+                    {
+                        "title": "Options",
+                        "rows": rows
+                    }
+                    ]
+                }
+            }
+            
+            }
+        response = requests.post(self.api_url, headers=headers, json=payload)
+        ans = response.json()
+        print(ans)
+
+    def send_books_message(self, phone_number):
+        from books.models import Book
+        headers = {"Authorization": self.api_token}
+        books = Book.objects.all()
+        rows = [
+            {
+            "id": book.id,
+            "title": f"📈 {book.title}",
+            }
+            for book in books
+        ]
+        
+        payload = {"messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_number,
+            "type": "interactive",
+                "interactive": {
+                "type": "list",
+                "header": {
+                "type": "text",
+                "text": 'Trading Books'
+                },
+                "body": {
+                "text": "I see you're interested in our trading books collection! We have both free and premium options available. \n\nChoose your book by clicking on the view books button below."
+                },
+                "footer": {
+                "text": "Terms and Conditions apply."
+                },
+                "action":
+                {
+                    "button": "View Books",
+                    "sections": [
+                    {
+                        "title": "Options",
+                        "rows": rows
+                    }
+                    ]
+                }
+            }
+            
+            }
+        response = requests.post(self.api_url, headers=headers, json=payload)
+        ans = response.json()
+        print(ans)
+
+    def send_documents(self, phone_number, document_file, caption, title):
+        headers = {"Authorization": self.api_token }
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_number,
+            "type": "document",
+            "document": {
+                "link": f"https://supreme.finpal.co.zw{document_file}",
+                "filename": title,
+                "caption":caption
+            }
+        }
+
+        response = requests.post(self.api_url, headers=headers, json=payload)
+        ans = response.json
+        print("Response: ", ans)
 
     def cancel_button(self, phone_number, message):
         headers = {"Authorization": self.api_token}
@@ -131,6 +267,45 @@ class WhatsAppService:
                 
         response = requests.post(self.api_url, headers=headers, json=payload)
         ans = response.json()
+
+    def yes_or_no_button(self, phone_number, message):
+        headers = {"Authorization": self.api_token}
+        payload = {"messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": phone_number,
+                "type": "interactive",
+                "interactive": {
+                        "type": "list",
+                        "body": {
+                        "text": message
+                        },
+                        "action":
+                        {
+                            "button": " Confirm Options",
+                            "sections": [
+                                {
+                                    "title": "Options",
+                                    "rows": [
+                                        {
+                                            "id": "Yes",
+                                            "title": "✅ Yes",
+                                        },
+                                        {
+                                            "id": "menu",
+                                            "title": "❌ No",
+                                        },
+                                    ]
+
+                                }
+                            ]
+                        }
+                    }
+                    }
+                            
+                
+        response = requests.post(self.api_url, headers=headers, json=payload)
+        ans = response.json()
+        print(ans)
     
     def home_button(self, phone_number, message):
         headers = {"Authorization": self.api_token}
@@ -161,38 +336,75 @@ class WhatsAppService:
         response = requests.post(self.api_url, headers=headers, json=payload)
         ans = response.json()
 
-    
-    def process_image_message(self, phone_number, image_data, mime_type=None):
-        """Process incoming image message (POP screenshot)"""
-        try:
-            # Convert base64 image data to file-like object
-            if isinstance(image_data, str) and image_data.startswith('data:'):
-                # Data URL format: data:image/png;base64,...
-                image_data = image_data.split(',')[1]
+    def update_signals_subscription(self, phone_number):
+        self.send_message(phone_number, "🔄 Verifying your subscription... Please wait.")
+        from subscriptions.models import SubscriptionPlans, Subscribers
+        user = User.objects.get(phone_number=phone_number)
+        sub = Subscribers.objects.get(trader=user)
+        image_file = sub.pop_image.path
+
+        pop = self.ocr_service.process_pop_image(image_file)
+
+        if 'error' in pop:
+            self.send_signals_flow(phone_number, f"❌ OCR Error: {pop['error']}. Please resend a clearer image of your EcoCash POP.")
+            return
             
-            image_bytes = base64.b64decode(image_data)
-            image_file = io.BytesIO(image_bytes)
+        extracted_reference = pop.get('transaction_details', {}).get('reference')
+        extracted_amount = pop.get('transaction_details', {}).get('amount')
+
+        if not extracted_reference:
+            message = (
+                "We couldn't extract a valid Transaction ID from your message. "
+                "Please resend the full EcoCash message or the correct transaction ID."
+            )
+            self.send_signals_flow(phone_number, message)
+            return
+
+            # Find matching cashout transaction
+        cashout = CashOutTransaction.objects.filter(
+                phone=sub.ecocash_number, 
+                txn_id=extracted_reference
+            ).first()
             
-            # Process image with OCR
-            result = self.ocr_service.process_pop_image(image_file)
-            
-            if 'error' in result:
-                return {
-                    'success': False,
-                    'error': result['error']
-                }
-            
-            return {
-                'success': True,
-                'extracted_text': result.get('extracted_text', ''),
-                'transaction_details': result.get('transaction_details', {})
-            }
-            
-        except Exception as e:
-            return {
-                'success': False,
-                'error': f'Failed to process image: {str(e)}'
-            }
+            # Try partial match if exact not found
+        if not cashout:
+            cashout = CashOutTransaction.objects.filter(
+                phone=sub.ecocash_number, 
+                txn_id__endswith=extracted_reference
+            ).first()
+            print("Partial match cashout:", cashout)
+
+        if cashout:
+            if cashout.completed:
+                message = "This transaction was already redeemed. Please contact support if you believe this is an error."
+                self.home_button(phone_number, message)
+
+            else:
+                if sub.plan.price != Decimal(extracted_amount):
+                    message = f"The amount ${extracted_amount} does not match the subscription plan price of ${sub.plan.price}. Please resend the correct EcoCash POP."
+                    self.send_signals_flow(phone_number, message)
+                    return
+
+                sub.active = True
+                sub.expiry_date = datetime.now() + timedelta(days=sub.plan.duration_days)
+                sub.save()
+                
+                cashout.trader = user
+                cashout.save()
+
+                message = (f"✅🎉 Congratulations! Your Trading Signals Plan Is Now Active\n\n"
+                f"Plan: {sub.plan.plan_name}!\n"
+                f"Amount: ${extracted_amount}\n"
+                f"Duration: {sub.plan.duration_days} days\n")
+                self.home_button(phone_number, message)
+                return
+        else:
+            message = (
+                "We could not find a matching EcoCash transaction for the proof of payment you provided. "
+                "Please resend the proof of payment."
+            )
+            self.send_signals_flow(phone_number, message)
+            return
     
     def create_transaction_with_ecocash_pop(self, user, amount, deriv_account_number, ecocash_number, ecocash_name, image_data):
         """Create transaction with EcoCash POP - extract only amount and reference"""
@@ -452,6 +664,46 @@ class WhatsAppService:
 
         response = requests.post(self.api_url, headers=headers, json=payload)
     
+    def send_withdrawal_flow(self, phone_number):
+        headers = {"Authorization": self.api_token}
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_number,
+            "type": "interactive",
+            "interactive" : {
+            "type": "flow",
+            "header": {
+            "type": "text",
+            "text": "You selected Deriv Withdrawal 🏦"
+            },
+            "body": {
+            "text": "Great! Let's process your Deriv withdrawal.\n\n Note 🔔 : We charge zero fees for withdrawals — you receive your funds with no extra costs. \n\nClick the withdrawal button below to proceed."
+            },
+            "footer": {
+            "text": "#supreme #instant #secure"
+            },
+            "action": {
+            "name": "flow",
+            "parameters": {
+                "flow_message_version": "3",
+                "flow_token": f"{phone_number}",
+                "flow_id": "1147957117537005",
+                "flow_cta": "DERIV WITHDRAWAL",
+                "flow_action": "navigate",
+                "flow_action_payload": {
+                "screen": "DETAILS",
+                "data": {
+                    "account_number": "account_number",
+                }
+                }
+            }
+            }
+            }
+         }
+
+        response = requests.post(self.api_url, headers=headers, json=payload)
+    
     def send_pop_flow(self, phone_number, message):
         headers = {"Authorization": self.api_token}
         payload = {
@@ -493,46 +745,175 @@ class WhatsAppService:
         response = requests.post(self.api_url, headers=headers, json=payload)
         print("Send POP Response: ", response.json())
         return
+    
+    def send_message_pop_flow(self, phone_number, message):
+        headers = {"Authorization": self.api_token}
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_number,
+            "type": "interactive",
+            "interactive" : {
+            "type": "flow",
+            "header": {
+            "type": "text",
+            "text": "CONFIRM DEPOSIT"
+            },
+            "body": {
+            "text": f"{message}"
+            },
+            "footer": {
+            "text": "#supreme #instant #secure"
+            },
+            "action": {
+            "name": "flow",
+            "parameters": {
+                "flow_message_version": "3",
+                "flow_token": f"{phone_number}",
+                "flow_id": "1215142140476957",
+                "flow_cta": "UPLOAD SMS",
+                "flow_action": "navigate",
+                "flow_action_payload": {
+                "screen": "POP",
+                "data": {
+                    "ecocash_message": "ecocash_message",
+                }
+                }
+            }
+            }
+            }
+         }
+
+        response = requests.post(self.api_url, headers=headers, json=payload)
+        print("Send POP Response: ", response.json())
+        return
+
+    def send_signals_flow(self, phone_number, message):
+        headers = {"Authorization": self.api_token}
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_number,
+            "type": "interactive",
+            "interactive" : {
+            "type": "flow",
+            "header": {
+            "type": "text",
+            "text": "CONFIRM SIGNALS SUBSCRIPTION"
+            },
+            "body": {
+            "text": f"{message}"
+            },
+            "footer": {
+            "text": "#supreme #instant #secure"
+            },
+            "action": {
+            "name": "flow",
+            "parameters": {
+                "flow_message_version": "3",
+                "flow_token": f"{phone_number}",
+                "flow_id": "1937389263504463",
+                "flow_cta": "UPLOAD POP",
+                "flow_action": "navigate",
+                "flow_action_payload": {
+                "screen": "DETAILS",
+                "data": {
+                    "ecocash_pop": "ecocash_pop",
+                }
+                }
+            }
+            }
+            }
+         }
+
+        response = requests.post(self.api_url, headers=headers, json=payload)
+        print("Send POP Response: ", response.json())
+        return
         
     def create_deposit_transaction(self, fromId):
-        """Create a deposit transaction using DerivPaymentAgent class."""
+        """Create a deposit transaction using unified extraction service."""
         try:
             order = InitiateOrders.objects.get(trader__phone_number=fromId)
             trader = User.objects.get(phone_number=fromId)
             account_number = order.account_number
             ecocash_number = order.ecocash_number
 
-            ecocash_pop = EcocashPop.objects.get(order=order)
-            image_file = ecocash_pop.ecocash_pop.path
-            pop = self.ocr_service.process_pop_image(image_file)
+            # Get the stored EcoCash POP if exists
+            message_text=None
+            try:
+                ecocash_pop = EcocashPop.objects.get(order=order)
+                if ecocash_pop.has_image:
+                    image_file = ecocash_pop.ecocash_pop.path
+                    has_image = True
+                else:
+                    message_text = ecocash_pop.ecocash_message
+                    has_image = False
+            except EcocashPop.DoesNotExist:
+                image_file = None
+                has_image = False
+            
+            # Use unified extraction service
+            if has_image and message_text:
+                # If we have both image and text, try both
+                pop = self.ocr_service.extract_from_any_source(
+                    image_file=image_file,
+                    message=message_text
+                )
+            elif has_image:
+                # Only image available
+                pop = self.ocr_service.extract_from_any_source(image_file=image_file)
+            elif message_text:
+                # Only text message available
+                pop = self.ocr_service.extract_from_any_source(message=message_text)
+            else:
+                # No image or text provided
+                self.send_message_pop_flow(fromId, "❌ Please send either an EcoCash POP image or the transaction message text.")
+                return
+            
+            # Check for extraction errors
+            if 'error' in pop:
+                error_msg = pop.get('error', 'Unknown error')
+                if has_image:
+                    self.send_message_pop_flow(fromId, f"❌ Extraction Error: {error_msg}\n\nPlease send the text cashout message instead.")
+                else:
+                    self.send_message_pop_flow(fromId, f"❌ Extraction Error: {error_msg}\n\nPlease resend the ecocash transaction message.")
+                
+                # Clean up if we created a pop object
+                if has_image:
+                    ecocash_pop.delete()
+                return
+            
+            # Extract transaction details
+            extracted_reference = pop.get('transaction_details', {}).get('reference')
+            total_received_amount = pop.get('transaction_details', {}).get('amount')
+            extraction_source = pop.get('source', 'unknown')
 
+            print(f"Extracted txn_id: {extracted_reference} and amount: {total_received_amount} from {extraction_source}.")
+
+            if not extracted_reference:
+                message = (
+                    f"We couldn't extract a valid Transaction ID from your {extraction_source}. "
+                    f"Please resend the full EcoCash message.\n\n"
+                    f"Extraction source: {extraction_source}"
+                )
+                self.send_message_pop_flow(fromId, message)
+                if has_image:
+                    ecocash_pop.delete()
+                return
+            
             # Ensure account number starts with 'CR'
             if not account_number.upper().startswith('CR'):
                 account_number = 'CR' + account_number.lstrip('crCR')
             
-            if 'error' in pop:
-                self.send_pop_flow(fromId, f"❌ OCR Error: {pop['error']}. Please resend a clearer image of your EcoCash POP.")
-                ecocash_pop.delete()
-                return
+            # Normalize phone number for lookup
+            normalized_phone = ecocash_number.lstrip('0')
+            if normalized_phone.startswith('263'):
+                normalized_phone = normalized_phone[3:]
             
-            # Extract transaction details from POP
-            extracted_reference = pop.get('transaction_details', {}).get('reference')
-            extracted_amount = pop.get('transaction_details', {}).get('amount')
-
-            print(f"Extracted txn_id: {extracted_reference} and amount: {extracted_amount} from POP OCR.")
-
-            if not extracted_reference:
-                message = (
-                    "We couldn't extract a valid Transaction ID from your message. "
-                    "Please resend the full EcoCash message or the correct transaction ID."
-                )
-                self.send_pop_flow(fromId, message)
-                ecocash_pop.delete()
-                return
-
-            # Find matching cashout transaction
+            # Look for matching cashout transaction
             cashout = CashOutTransaction.objects.filter(
-                phone=ecocash_number, 
+                phone__in=[ecocash_number, normalized_phone, '0' + normalized_phone, 
+                        '263' + normalized_phone, '+263' + normalized_phone],
                 txn_id=extracted_reference
             ).first()
             
@@ -565,69 +946,157 @@ class WhatsAppService:
                             "Your transaction was marked completed, but we could not find the credited account details. "
                             "Please contact support."
                         )
-                    self.send_message(fromId, message)
+                    return self.send_message(fromId, message)
 
                 else:
                     try:
-                        amount = Decimal(extracted_amount)
+                        total_amount = Decimal(cashout.amount)
                     except (ValueError, TypeError, InvalidOperation):
-                        self.send_message(fromId, "Failed to get the transaction amount. Please contact support.")
+                        self.send_message(fromId, f"Failed to get the transaction amount from {extraction_source}. Please contact support.")
+                        return
+                    
+                    # Calculate net amount and charge correctly
+                    net_amount, charge = self._calculate_net_amount_and_charge(total_amount)
+                    
+                    print(f"Total received: ${total_amount}")
+                    print(f"Net amount (to Deriv): ${net_amount}")
+                    print(f"Transaction charge: ${charge}")
+                    
+                    # Validate the calculation
+                    if abs((net_amount + charge) - total_amount) > Decimal('0.01'):
+                        self.send_message(fromId, "Amount calculation error. Please contact support.")
                         return
                     
                     cashout.trader = trader
                     cashout.save()
                     
-                    # Create the EcoCashTransaction
+                    # Create the EcoCashTransaction with NET amount
                     transaction = EcoCashTransaction.objects.create(
                         user=trader,
                         transaction_type='deposit',
-                        amount=amount,
+                        amount=net_amount,  # This is the amount that goes to Deriv
                         deriv_account_number=account_number,
                         ecocash_number=ecocash_number,
                         ecocash_name=cashout.name,
+                        reference_number=f"DP{datetime.now().strftime('%Y%m%d%H%M%S')}",
                         ecocash_reference=extracted_reference,
-                        charge=self.calculate_charge(amount),
+                        charge=charge,  
                         currency='USD',
-                        status='processing'  # Start as processing since we're about to process it
+                        status='processing',  
                     )
                     
-                    # Create receipt
-                    receipt = TransactionReceipt.objects.create(
-                        transaction=transaction,
-                        receipt_image=image_file,
-                        uploaded_by=trader,
-                        verified=True,
-                        verified_at=datetime.now(),
-                        verification_notes="Auto-verified via WhatsApp Ecocash POP upload."
-                    )
+                    # Create receipt only if we have an image
+                    if has_image:
+                        receipt = TransactionReceipt.objects.create(
+                            transaction=transaction,
+                            receipt_image=image_file,
+                            uploaded_by=trader,
+                            verified=True,
+                            verified_at=datetime.now(),
+                            verification_notes=f"Auto-verified via {extraction_source}."
+                        )
+                    else:
+                        # Create receipt without image
+                        receipt = TransactionReceipt.objects.create(
+                            transaction=transaction,
+                            uploaded_by=trader,
+                            verified=True,
+                            verified_at=datetime.now(),
+                            verification_notes=f"Auto-verified via text message {extraction_source}."
+                        )
                     
-                    self.send_message(fromId, f"_*processing your payment...*_")
+                    self.send_message(fromId, f"_*Processing your payment...*_")
+                    
+                    # Send acknowledgment message
+                    source_msg = "POP image" if extraction_source == 'ocr' else "text message"
+                    ack_message = (
+                        f"✅ Transaction details extracted successfully from {source_msg}!\n\n"
+                        f"• Amount: ${float(total_amount):.2f}\n"
+                        f"• Transaction ID: {extracted_reference}\n"
+                        f"• Net deposit: ${float(net_amount):.2f}\n"
+                        f"• Charge: ${float(charge):.2f}\n\n"
+                        f"Processing your deposit to account: {account_number}..."
+                    )
+                    self.send_message(fromId, ack_message)
                     
                     # Now process the deposit using DerivPaymentAgent
-                    # self._process_deposit_payment(transaction, cashout, order, trader)
+                    return self._process_deposit_payment(transaction, cashout, order, trader)
             else:
                 message = (
-                    "We could not find a matching EcoCash transaction for the ID you provided. "
-                    "Please resend the full message or confirm your transaction details."
+                    f"We could not find a matching EcoCash transaction for the ID you provided.\n\n"
+                    f"Extracted from: {extraction_source}\n"
+                    f"Transaction ID: {extracted_reference}\n"
+                    f"Phone: {ecocash_number}\n\n"
+                    f"Please resend the full message or confirm your transaction details."
                 )
                 self.send_pop_flow(fromId, message)
-                ecocash_pop.delete()
+                if has_image:
+                    ecocash_pop.delete()
                 return
 
         except InitiateOrders.DoesNotExist:
             message = "Sorry! Your order could not be found. Please start again or contact support."
             self.send_deposit_flow(fromId, message)
-            ecocash_pop.delete()
+            if has_image:
+                ecocash_pop.delete()
         except User.DoesNotExist:
             message = "Trader account not found. Please contact support."
-            self.send_message(fromId, message)
+            return self.send_message(fromId, message)
+
+    def _calculate_net_amount_and_charge(self, total_amount):
+
+        try:
+            # First, check which charge range would apply
+            charge_table = TransactionCharge.objects.filter(
+                is_active=True
+            ).order_by('min_amount')
+            
+            applicable_charge = None
+            for charge_config in charge_table:
+               
+                if charge_config.is_percentage:
+                   
+                    percentage_decimal = charge_config.percentage_rate / Decimal('100')
+                    net_amount = (total_amount - charge_config.additional_fee) / (Decimal('1') + percentage_decimal)
+                    
+                    if charge_config.min_amount <= net_amount <= charge_config.max_amount:
+                        charge = total_amount - net_amount
+                        return net_amount.quantize(Decimal('0.01')), charge.quantize(Decimal('0.01'))
+                else:
+                   
+                    net_amount = total_amount - charge_config.fixed_charge
+                    
+                    # Check if net_amount falls in this range
+                    if charge_config.min_amount <= net_amount <= charge_config.max_amount:
+                        charge = charge_config.fixed_charge
+                        return net_amount.quantize(Decimal('0.01')), charge.quantize(Decimal('0.01'))
+            
+            # If no range matched, use the highest percentage range as fallback
+            highest_percentage = TransactionCharge.objects.filter(
+                is_percentage=True,
+                is_active=True
+            ).order_by('-min_amount').first()
+            
+            if highest_percentage:
+                percentage_decimal = highest_percentage.percentage_rate / Decimal('100')
+                net_amount = (total_amount - highest_percentage.additional_fee) / (Decimal('1') + percentage_decimal)
+                charge = total_amount - net_amount
+                return net_amount.quantize(Decimal('0.01')), charge.quantize(Decimal('0.01'))
+                
+        except Exception as e:
+            print(f"Error calculating net amount: {e}")
+        
+        # Fallback: use 10% + 0.9 as default
+        net_amount = (total_amount - Decimal('0.90')) / Decimal('1.10')
+        charge = total_amount - net_amount
+        return net_amount.quantize(Decimal('0.01')), charge.quantize(Decimal('0.01'))
 
     def _process_deposit_payment(self, transaction, cashout, order, trader):
         """Process the actual deposit payment using DerivPaymentAgent."""
-        from deriv import DerivPaymentAgent  
+        from deriv.views import DerivPaymentAgent  
         
         # Calculate net amount
-        net_amount = transaction.amount - transaction.charge
+        net_amount = transaction.amount 
         
         # Initialize Deriv agent
         deriv_agent = DerivPaymentAgent()
@@ -700,7 +1169,7 @@ class WhatsAppService:
             message = (
                 "Transaction Successful!✅\n"
                 f"Please check your Deriv Balance!\n\n"
-                f"Transfer from Agent: `ZimboFx`\n\n"
+                f"Transfer from Agent: `SupremeFx`\n\n"
                 f"To Client: {transfer_result['client_to_full_name']} \n\n"
                 f"Deriv Account: `{obfuscated_cr}`\n\n"
                 f"Paid: `${float(transaction.amount):.2f}`\n\n"
@@ -709,8 +1178,16 @@ class WhatsAppService:
                 "For any queries, please contact our support team.\n"
                 "Thank you for choosing us!"
             )
-            self.home_button(transaction.user.phone_number, message)
-            
+            self.send_message(transaction.user.phone_number, message)
+            from .models import Switch
+            switch= Switch.objects.get(transaction_type='deposit')
+            if switch:
+                if switch.on_message:
+                    self.home_button(transaction.user.phone_number, switch.on_message)
+                else:
+                    pass
+            return
+         
         else:
             # ❌ Transfer failed
             self._handle_transfer_failure(
@@ -751,7 +1228,7 @@ class WhatsAppService:
                     message = (
                         "Transaction Successful!✅\n"
                         f"Please check your Deriv Balance!\n\n"
-                        f"Transfer from Agent: `ZimboFx`\n\n"
+                        f"Transfer from Agent: `SupremeFx`\n\n"
                         f"To Client: {transfer_result['client_to_full_name']} \n\n"
                         f"Deriv Account: `{obfuscated_cr}`\n\n"
                         f"Paid: `${float(transaction.amount):.2f}`\n\n"
@@ -760,7 +1237,14 @@ class WhatsAppService:
                         "For any queries, please contact our support team.\n"
                         "Thank you for choosing us!"
                     )
-                    self.Home(transaction.user.phone_number, message)
+                    self.send_message(transaction.user.phone_number, message)
+                    from .models import Switch
+                    switch= Switch.objects.get(transaction_type='deposit')
+                    if switch:
+                        if switch.on_message:
+                            self.home_button(transaction.user.phone_number, switch.on_message)
+                        else:
+                            pass
                     return
                 else:
                     # Transfer failed after verification
@@ -814,7 +1298,7 @@ class WhatsAppService:
         # Mark transaction as failed
         transaction.mark_failed(reason=f"Transaction failed: {error_details}")
     
-    def normalize_name(name: str) -> set:
+    def normalize_name(self, name: str) -> set:
         """
         Normalize a name into a set of lowercase tokens for comparison.
         Removes common prefixes (Mr, Mrs, Ms, Miss, Dr, etc.).
@@ -939,3 +1423,48 @@ We'll process your withdrawal and send *${transaction.total_amount}* to:
         
         message += "Type *status [reference]* for details (e.g., status ABC123456)"
         return message
+
+    def contact_support(self, phoneNumber):
+        headers = {"Authorization": settings.WHATSAPP_TOKEN}
+        payload = {"messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": phoneNumber,
+                "type": "contacts",
+                    "contacts": [{
+                        "addresses": [{
+                            "city": "Harare",
+                            "country": "Zimbabwe",
+                            "country_code": "263",
+                            "type": "WORK"
+                            }],
+                        "emails": [{
+                            "email": "frabjousafrika@gmail.com",
+                            "type": "WORK"
+                            },
+                            ],
+                        "name": {
+                            "formatted_name": "SupremeFx Support",
+                            "first_name": "SupremeFx",
+                            "last_name": "Support",
+                            "suffix": "SUFFIX",
+                            "prefix": "PREFIX"
+                        },
+                        "org": {
+                            "company": "SUPREME PVT LTD",
+                            "department": "SUPPORT",
+                            "title": "CUSTOMER SUPPORT"
+                        },
+                        "phones": [
+                            {
+                            "phone": "263777636820",
+                            "type": "WORK",
+                            "wa_id": "263777636820",
+                            }],
+                        "urls": [{
+                            "url": "https://supreme.co.zw",
+                            "type": "WORK"
+                            }]
+                        }]
+                    }
+        response = requests.post(settings.WHATSAPP_URL, headers=headers, json=payload)
+        ans = response.json()

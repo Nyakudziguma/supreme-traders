@@ -1,152 +1,361 @@
-<!-- templates/finance/admin/charges_management.html -->
 {% extends 'base.html' %}
 
 {% block title %}Manage Charges - Supreme AI{% endblock %}
 
+{% block page_title %}Transaction Charges{% endblock %}
+{% block page_subtitle %}Manage fee structure for EcoCash transactions{% endblock %}
+
+{% block page_actions %}
+<div class="flex items-center space-x-3">
+    <a href="{% url 'finance:admin_transaction_list' %}" 
+       class="px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Transactions
+    </a>
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-3xl font-bold text-teal-900">Transaction Charges</h1>
-            <p class="text-gray-600 mt-2">Manage fee structure for EcoCash transactions</p>
+    <!-- Add New Charge Card -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-plus-circle text-amber-600 mr-2"></i>
+                Add New Charge Range
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">Configure fee structure for different transaction amounts</p>
         </div>
-        <div>
-            <a href="{% url 'finance:admin_transaction_list' %}" 
-               class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
-                ← Back to Transactions
-            </a>
-        </div>
-    </div>
-
-    <!-- Add New Charge Form -->
-    <div class="bg-white rounded-2xl shadow-lg p-6">
-        <h3 class="text-lg font-semibold text-teal-900 mb-4">Add New Charge Range</h3>
-        <form method="post">
+        
+        <form method="post" class="p-6">
             {% csrf_token %}
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div>
-                    <label for="{{ form.min_amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        Min Amount *
-                    </label>
-                    {{ form.min_amount }}
-                </div>
-                <div>
-                    <label for="{{ form.max_amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        Max Amount *
-                    </label>
-                    {{ form.max_amount }}
-                </div>
-                <div>
-                    <label for="{{ form.fixed_charge.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        Fixed Charge
-                    </label>
-                    {{ form.fixed_charge }}
-                </div>
-                <div>
-                    <label for="{{ form.percentage_rate.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        Percentage Rate
-                    </label>
-                    {{ form.percentage_rate }}
-                </div>
-                <div>
-                    <label for="{{ form.additional_fee.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        Additional Fee
-                    </label>
-                    {{ form.additional_fee }}
+            
+            {% if form.non_field_errors %}
+            <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
+                    <div class="text-sm text-red-700">
+                        {{ form.non_field_errors }}
+                    </div>
                 </div>
             </div>
+            {% endif %}
             
-            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="flex items-center">
-                    {{ form.is_percentage }}
-                    <label for="{{ form.is_percentage.id_for_label }}" class="ml-2 text-sm font-medium text-gray-700">
-                        Use Percentage Calculation
-                    </label>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Amount Range -->
+                <div class="space-y-4">
+                    <h4 class="text-sm font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-dollar-sign text-amber-600 mr-2"></i>
+                        Amount Range
+                    </h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="{{ form.min_amount.id_for_label }}" class="block text-xs font-medium text-gray-700 mb-2">
+                                Min Amount *
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                {{ form.min_amount }}
+                            </div>
+                            {% if form.min_amount.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.min_amount.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.max_amount.id_for_label }}" class="block text-xs font-medium text-gray-700 mb-2">
+                                Max Amount *
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                {{ form.max_amount }}
+                            </div>
+                            {% if form.max_amount.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.max_amount.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                <div class="flex items-center">
-                    {{ form.is_active }}
-                    <label for="{{ form.is_active.id_for_label }}" class="ml-2 text-sm font-medium text-gray-700">
-                        Active
-                    </label>
+                
+                <!-- Charge Configuration -->
+                <div class="space-y-4">
+                    <h4 class="text-sm font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-percentage text-blue-600 mr-2"></i>
+                        Charge Settings
+                    </h4>
+                    <div class="space-y-3">
+                        <div>
+                            <label for="{{ form.fixed_charge.id_for_label }}" class="block text-xs font-medium text-gray-700 mb-2">
+                                Fixed Charge
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                {{ form.fixed_charge }}
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">For fixed fee ranges</p>
+                        </div>
+                        <div>
+                            <label for="{{ form.percentage_rate.id_for_label }}" class="block text-xs font-medium text-gray-700 mb-2">
+                                Percentage Rate
+                            </label>
+                            <div class="relative">
+                                {{ form.percentage_rate }}
+                                <span class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">%</span>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">For percentage-based charges</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex justify-end">
-                    <button type="submit" 
-                            class="bg-amber text-white px-6 py-2 rounded-lg hover:bg-gold transition duration-200 font-medium">
-                        Add Charge
-                    </button>
+                
+                <!-- Additional Settings -->
+                <div class="space-y-4">
+                    <h4 class="text-sm font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-cog text-gray-600 mr-2"></i>
+                        Additional Settings
+                    </h4>
+                    <div class="space-y-3">
+                        <div>
+                            <label for="{{ form.additional_fee.id_for_label }}" class="block text-xs font-medium text-gray-700 mb-2">
+                                Additional Fee
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                {{ form.additional_fee }}
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Extra fixed amount for percentage rates</p>
+                        </div>
+                        <div class="flex items-center justify-between pt-2">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center">
+                                    {{ form.is_percentage }}
+                                    <label for="{{ form.is_percentage.id_for_label }}" class="ml-2 text-xs font-medium text-gray-700">
+                                        Percentage
+                                    </label>
+                                </div>
+                                <div class="flex items-center">
+                                    {{ form.is_active }}
+                                    <label for="{{ form.is_active.id_for_label }}" class="ml-2 text-xs font-medium text-gray-700">
+                                        Active
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="submit" 
+                                    class="btn-gold px-5 py-2.5 rounded-lg font-semibold">
+                                <i class="fas fa-plus mr-2"></i>Add Charge
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </form>
     </div>
 
     <!-- Charges Table -->
-    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-list-ol text-amber-600 mr-2"></i>
+                        Configured Charges
+                    </h3>
+                    <p class="text-sm text-gray-600 mt-1">All fee ranges applied to transactions</p>
+                </div>
+                <div class="text-sm text-gray-700">
+                    <span class="font-semibold">{{ charges|length }}</span> charge{{ charges|pluralize }} configured
+                </div>
+            </div>
+        </div>
+        
+        {% if charges %}
         <div class="overflow-x-auto">
             <table class="w-full">
-                <thead class="bg-gray-50">
+                <thead class="bg-gradient-to-r from-amber-50 to-white">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Range</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Charge</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-arrows-alt-h text-amber-600 mr-2 text-xs"></i>
+                                Amount Range
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-money-bill-wave text-green-600 mr-2 text-xs"></i>
+                                Charge Details
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-tag text-purple-600 mr-2 text-xs"></i>
+                                Type
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-circle text-gray-600 mr-2 text-xs"></i>
+                                Status
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-calendar-alt text-blue-600 mr-2 text-xs"></i>
+                                Last Updated
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-cogs text-gray-600 mr-2 text-xs"></i>
+                                Actions
+                            </div>
+                        </th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="divide-y divide-amber-100">
                     {% for charge in charges %}
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">
-                                {% if charge.is_percentage %}
-                                    ${{ charge.min_amount }}+
-                                {% else %}
-                                    ${{ charge.min_amount }} - ${{ charge.max_amount }}
-                                {% endif %}
+                    <tr class="hover:bg-amber-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 rounded-lg bg-gradient-to-br {% if charge.is_percentage %}from-purple-100 to-purple-200{% else %}from-blue-100 to-blue-200{% endif %} flex items-center justify-center mr-3">
+                                    <i class="fas {% if charge.is_percentage %}fa-percentage{% else %}fa-dollar-sign{% endif %} {% if charge.is_percentage %}text-purple-600{% else %}text-blue-600{% endif %}"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-semibold text-gray-900">
+                                        {% if charge.is_percentage %}
+                                            ${{ charge.min_amount }}+
+                                        {% else %}
+                                            ${{ charge.min_amount }} - ${{ charge.max_amount }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        Min: ${{ charge.min_amount }}
+                                        {% if not charge.is_percentage %}
+                                        • Max: ${{ charge.max_amount }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="space-y-1">
+                                <div class="text-sm font-medium text-gray-900">
+                                    {% if charge.is_percentage %}
+                                        {{ charge.percentage_rate }}% + ${{ charge.additional_fee }}
+                                    {% else %}
+                                        ${{ charge.fixed_charge }}
+                                    {% endif %}
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    {% if charge.is_percentage %}
+                                        Example: $100 → ${{ charge.calculate_example_charge }}
+                                    {% else %}
+                                        Flat fee for range
+                                    {% endif %}
+                                </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">
-                                {% if charge.is_percentage %}
-                                    {{ charge.percentage_rate }}% + ${{ charge.additional_fee }}
-                                {% else %}
-                                    ${{ charge.fixed_charge }}
-                                {% endif %}
+                            {% if charge.is_percentage %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-purple-100 to-purple-50 text-purple-800 border border-purple-200">
+                                <i class="fas fa-percentage mr-1.5"></i>Percentage
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-blue-50 text-blue-800 border border-blue-200">
+                                <i class="fas fa-dollar-sign mr-1.5"></i>Fixed
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if charge.is_active %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-100 to-green-50 text-green-800 border border-green-200">
+                                <i class="fas fa-check-circle mr-1.5"></i>Active
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-red-100 to-red-50 text-red-800 border border-red-200">
+                                <i class="fas fa-times-circle mr-1.5"></i>Inactive
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ charge.updated_at|date:"M d, Y" }}</div>
+                            <div class="text-xs text-gray-500">{{ charge.updated_at|date:"H:i" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center space-x-2">
+                                <a href="{% url 'finance:admin_edit_charge' charge.pk %}" 
+                                   class="text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 p-2 rounded-lg transition-colors"
+                                   title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'finance:admin_toggle_charge' charge.pk %}" 
+                                   class="{% if charge.is_active %}text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100{% else %}text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100{% endif %} p-2 rounded-lg transition-colors"
+                                   title="{% if charge.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                    <i class="fas {% if charge.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                                </a>
                             </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if charge.is_percentage %}bg-purple-100 text-purple-800{% else %}bg-blue-100 text-blue-800{% endif %}">
-                                {% if charge.is_percentage %}Percentage{% else %}Fixed{% endif %}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if charge.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
-                                {% if charge.is_active %}Active{% else %}Inactive{% endif %}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ charge.updated_at|date:"M d, Y" }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                            <a href="{% url 'finance:admin_edit_charge' charge.pk %}" 
-                               class="text-amber hover:text-gold">Edit</a>
-                            <a href="{% url 'finance:admin_toggle_charge' charge.pk %}" 
-                               class="{% if charge.is_active %}text-red-600 hover:text-red-900{% else %}text-green-600 hover:text-green-900{% endif %}">
-                                {% if charge.is_active %}Deactivate{% else %}Activate{% endif %}
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                            No charges configured. Please add charges using the form above.
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="p-8 text-center">
+            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-money-bill-wave text-gray-400 text-xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No charges configured</h3>
+            <p class="text-gray-600 max-w-md mx-auto mb-6">
+                Configure your transaction fee structure by adding charge ranges above.
+            </p>
+            <div class="bg-gradient-to-r from-amber-50 to-blue-50 border border-amber-200 rounded-lg p-4 max-w-lg mx-auto">
+                <h4 class="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                    <i class="fas fa-lightbulb text-amber-600 mr-2"></i>
+                    Example Configuration
+                </h4>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="p-3 bg-white rounded-lg border border-amber-100">
+                        <div class="font-medium text-gray-900">$0 - $1</div>
+                        <div class="text-gray-600 text-xs">Fixed: $0.30</div>
+                    </div>
+                    <div class="p-3 bg-white rounded-lg border border-amber-100">
+                        <div class="font-medium text-gray-900">$1+ - $5</div>
+                        <div class="text-gray-600 text-xs">Fixed: $0.50</div>
+                    </div>
+                    <div class="p-3 bg-white rounded-lg border border-amber-100">
+                        <div class="font-medium text-gray-900">$5+ - $10</div>
+                        <div class="text-gray-600 text-xs">Fixed: $0.75</div>
+                    </div>
+                    <div class="p-3 bg-white rounded-lg border border-amber-100">
+                        <div class="font-medium text-gray-900">$10+</div>
+                        <div class="text-gray-600 text-xs">10% + $0.90</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+<style>
+    /* Form input styling */
+    input[type="number"], 
+    input[type="text"],
+    select {
+        @apply w-full border border-gray-300 rounded-lg px-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white;
+    }
+    
+    /* Checkbox styling */
+    input[type="checkbox"] {
+        @apply h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded;
+    }
+    
+    /* Ensure table is responsive */
+    @media (max-width: 1024px) {
+        table {
+            min-width: 1024px;
+        }
+        .overflow-x-auto {
+            overflow-x: auto;
+        }
+    }
+</style>
+
 {% endblock %}

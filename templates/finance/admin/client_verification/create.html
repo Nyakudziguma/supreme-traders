@@ -1,0 +1,476 @@
+<!-- templates/finance/admin/client_verification/create.html -->
+{% extends 'base.html' %}
+
+{% block title %}Add New Client - Supreme AI{% endblock %}
+
+{% block page_title %}Add New Client for Verification{% endblock %}
+{% block page_subtitle %}Register a new client for identity verification{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Client Form -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <i class="fas fa-user-plus text-amber-600 mr-2"></i>
+                        Client Information
+                    </h3>
+                    <p class="text-sm text-gray-600 mt-1">Fill in the client's details below</p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'finance:client_verification_list' %}" 
+                       class="px-4 py-2 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition duration-200 font-medium flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to List
+                    </a>
+                </div>
+            </div>
+            
+            <form method="post" action="{% url 'finance:client_verification_create' %}" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Basic Information -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user text-blue-500 mr-2"></i>
+                            Full Name *
+                        </label>
+                        <input type="text" 
+                               name="name" 
+                               required
+                               class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200"
+                               placeholder="John Doe"
+                               value="{{ request.POST.name|default:'' }}">
+                        <p class="text-xs text-gray-500 mt-1">Client's full name as on official documents</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-phone text-green-500 mr-2"></i>
+                            EcoCash Number *
+                        </label>
+                        <input type="text" 
+                               name="ecocash_number" 
+                               required
+                               class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 ecocash-input"
+                               placeholder="077XXXXXXX"
+                               value="{{ request.POST.ecocash_number|default:'' }}">
+                        <p class="text-xs text-gray-500 mt-1">Will be automatically normalized to 263 format</p>
+                        <div id="ecocash-check-result" class="mt-2"></div>
+                    </div>
+                </div>
+                
+                <!-- Verification Documents -->
+                <div>
+                    <h4 class="text-md font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-file-alt text-purple-600 mr-2"></i>
+                        Verification Documents (Optional)
+                    </h4>
+                    <p class="text-sm text-gray-600 mb-4">Upload verification documents for enhanced security</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- National ID -->
+                        <div class="border-2 border-dashed border-amber-300 rounded-xl p-6 hover:border-amber-400 transition-colors">
+                            <div class="text-center">
+                                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-id-card text-blue-600 text-2xl"></i>
+                                </div>
+                                <h5 class="font-medium text-gray-900 mb-2">National ID</h5>
+                                <p class="text-sm text-gray-600 mb-4">Upload a clear image of the client's National ID</p>
+                                
+                                <div class="relative">
+                                    <input type="file" 
+                                           name="national_id_image"
+                                           id="national_id_image"
+                                           accept="image/*"
+                                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <label for="national_id_image" 
+                                           class="block px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition duration-200 cursor-pointer text-center">
+                                        <i class="fas fa-upload mr-2"></i> Choose File
+                                    </label>
+                                </div>
+                                <div id="national-id-preview" class="mt-4 hidden">
+                                    <p class="text-sm text-green-600 mb-2">File selected:</p>
+                                    <div class="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+                                        <span id="national-id-filename" class="text-sm font-medium text-green-800"></span>
+                                        <button type="button" 
+                                                onclick="clearFile('national_id_image')"
+                                                class="text-red-500 hover:text-red-700">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Selfie with ID -->
+                        <div class="border-2 border-dashed border-amber-300 rounded-xl p-6 hover:border-amber-400 transition-colors">
+                            <div class="text-center">
+                                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-camera text-purple-600 text-2xl"></i>
+                                </div>
+                                <h5 class="font-medium text-gray-900 mb-2">Selfie with ID</h5>
+                                <p class="text-sm text-gray-600 mb-4">Client holding their National ID next to face</p>
+                                
+                                <div class="relative">
+                                    <input type="file" 
+                                           name="selfie_with_id"
+                                           id="selfie_with_id"
+                                           accept="image/*"
+                                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <label for="selfie_with_id" 
+                                           class="block px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition duration-200 cursor-pointer text-center">
+                                        <i class="fas fa-upload mr-2"></i> Choose File
+                                    </label>
+                                </div>
+                                <div id="selfie-preview" class="mt-4 hidden">
+                                    <p class="text-sm text-green-600 mb-2">File selected:</p>
+                                    <div class="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+                                        <span id="selfie-filename" class="text-sm font-medium text-green-800"></span>
+                                        <button type="button" 
+                                                onclick="clearFile('selfie_with_id')"
+                                                class="text-red-500 hover:text-red-700">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <p class="text-sm text-amber-700 flex items-center">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Documents are optional but recommended for complete verification. Clients can still be verified without documents.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Verification Status -->
+                <div>
+                    <h4 class="text-md font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-shield-alt text-green-600 mr-2"></i>
+                        Verification Status
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                            <div class="flex items-center">
+                                <input type="radio" 
+                                       id="status_verified" 
+                                       name="verified" 
+                                       value="true"
+                                       class="w-5 h-5 text-green-600 focus:ring-green-500 border-green-300 rounded">
+                                <label for="status_verified" class="ml-3">
+                                    <span class="block text-sm font-medium text-green-900">Verify Immediately</span>
+                                    <span class="block text-sm text-green-700 mt-1">Client can perform restricted transactions right away</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg border border-yellow-200">
+                            <div class="flex items-center">
+                                <input type="radio" 
+                                       id="status_unverified" 
+                                       name="verified" 
+                                       value="false"
+                                       checked
+                                       class="w-5 h-5 text-yellow-600 focus:ring-yellow-500 border-yellow-300 rounded">
+                                <label for="status_unverified" class="ml-3">
+                                    <span class="block text-sm font-medium text-yellow-900">Add as Unverified</span>
+                                    <span class="block text-sm text-yellow-700 mt-1">Verify later after document review</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notes -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-sticky-note text-gray-500 mr-2"></i>
+                        Additional Notes (Optional)
+                    </label>
+                    <textarea name="notes" 
+                              rows="3"
+                              class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 resize-none"
+                              placeholder="Any additional information about this client..."></textarea>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="pt-6 border-t border-amber-200">
+                    <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+                        <a href="{% url 'finance:client_verification_list' %}" 
+                           class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition duration-200 font-medium text-center">
+                            Cancel
+                        </a>
+                        <button type="submit" 
+                                class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition duration-200 font-medium flex items-center justify-center">
+                            <i class="fas fa-save mr-2"></i> Save Client
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Verification Guide -->
+    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6">
+        <h4 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+            <i class="fas fa-graduation-cap text-blue-600 mr-2"></i>
+            Client Verification Guide
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 bg-white rounded-lg border border-blue-200">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-3">
+                    <i class="fas fa-user-check text-blue-600"></i>
+                </div>
+                <h5 class="font-medium text-gray-900 mb-2">Verified Clients</h5>
+                <p class="text-sm text-gray-600">Can perform all transactions, including name mismatches. Use for trusted clients.</p>
+            </div>
+            
+            <div class="p-4 bg-white rounded-lg border border-blue-200">
+                <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center mb-3">
+                    <i class="fas fa-clock text-yellow-600"></i>
+                </div>
+                <h5 class="font-medium text-gray-900 mb-2">Unverified Clients</h5>
+                <p class="text-sm text-gray-600">Restricted to exact name matches. Verify after document review.</p>
+            </div>
+            
+            <div class="p-4 bg-white rounded-lg border border-blue-200">
+                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mb-3">
+                    <i class="fas fa-shield-alt text-green-600"></i>
+                </div>
+                <h5 class="font-medium text-gray-900 mb-2">Documents</h5>
+                <p class="text-sm text-gray-600">Upload ID and selfie for enhanced security and fraud prevention.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* File upload styling */
+    input[type="file"] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+    }
+    
+    .file-label {
+        display: block;
+        width: 100%;
+        padding: 1rem;
+        border: 2px dashed #fcd34d;
+        border-radius: 0.75rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .file-label:hover {
+        border-color: #f59e0b;
+        background-color: #fffbeb;
+    }
+    
+    .file-preview {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // EcoCash number validation
+    const ecocashInput = document.querySelector('.ecocash-input');
+    const ecocashResult = document.getElementById('ecocash-check-result');
+    
+    if (ecocashInput) {
+        ecocashInput.addEventListener('blur', function() {
+            const phone = this.value.trim();
+            if (phone.length >= 9) {
+                checkEcoCashNumber(phone);
+            }
+        });
+        
+        ecocashInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 0) {
+                if (!value.startsWith('263') && value.length > 9) {
+                    value = '263' + value.slice(-9);
+                }
+                e.target.value = value;
+            }
+        });
+    }
+    
+    // File upload previews
+    const nationalIdInput = document.getElementById('national_id_image');
+    const selfieInput = document.getElementById('selfie_with_id');
+    
+    if (nationalIdInput) {
+        nationalIdInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const fileName = this.files[0].name;
+                document.getElementById('national-id-filename').textContent = fileName;
+                document.getElementById('national-id-preview').classList.remove('hidden');
+            }
+        });
+    }
+    
+    if (selfieInput) {
+        selfieInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const fileName = this.files[0].name;
+                document.getElementById('selfie-filename').textContent = fileName;
+                document.getElementById('selfie-preview').classList.remove('hidden');
+            }
+        });
+    }
+});
+
+function checkEcoCashNumber(phone) {
+    const resultDiv = document.getElementById('ecocash-check-result');
+    resultDiv.innerHTML = `
+        <div class="flex items-center text-blue-600">
+            <i class="fas fa-spinner fa-spin mr-2"></i>
+            Checking EcoCash number...
+        </div>
+    `;
+    
+    fetch(`/finance/api/verify-ecocash/?number=${phone}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                if (data.verified) {
+                    resultDiv.innerHTML = `
+                        <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="flex items-center text-green-700">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                <strong>Already Verified</strong>
+                            </div>
+                            <div class="mt-2 text-sm text-green-600">
+                                Client: ${data.name}<br>
+                                Status: ${data.verified ? 'Verified' : 'Unverified'}
+                            </div>
+                            <a href="/finance/client-verification/${data.client_id}/" 
+                               class="inline-block mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                <i class="fas fa-external-link-alt mr-1"></i> View client details
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div class="flex items-center text-yellow-700">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                <strong>Client Exists (Unverified)</strong>
+                            </div>
+                            <div class="mt-2 text-sm text-yellow-600">
+                                Client: ${data.name}<br>
+                                Status: Unverified
+                            </div>
+                            <a href="/finance/client-verification/${data.client_id}/" 
+                               class="inline-block mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                <i class="fas fa-external-link-alt mr-1"></i> View client details
+                            </a>
+                        </div>
+                    `;
+                }
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex items-center text-blue-700">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <strong>New Client</strong>
+                        </div>
+                        <div class="mt-2 text-sm text-blue-600">
+                            This EcoCash number is not registered. You can add this as a new client.
+                        </div>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            resultDiv.innerHTML = `
+                <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-center text-red-700">
+                        <i class="fas fa-times-circle mr-2"></i>
+                        <strong>Error Checking Number</strong>
+                    </div>
+                    <div class="mt-2 text-sm text-red-600">
+                        Could not verify EcoCash number. Please try again.
+                    </div>
+                </div>
+            `;
+        });
+}
+
+function clearFile(inputId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(inputId === 'national_id_image' ? 'national-id-preview' : 'selfie-preview');
+    
+    input.value = '';
+    preview.classList.add('hidden');
+}
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const nameInput = document.querySelector('input[name="name"]');
+    const phoneInput = document.querySelector('input[name="ecocash_number"]');
+    
+    if (!nameInput.value.trim()) {
+        e.preventDefault();
+        showToast('Please enter client name', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    if (!phoneInput.value.trim() || phoneInput.value.length < 9) {
+        e.preventDefault();
+        showToast('Please enter a valid EcoCash number', 'error');
+        phoneInput.focus();
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+});
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    const colors = {
+        'success': 'bg-gradient-to-r from-green-500 to-green-600',
+        'error': 'bg-gradient-to-r from-red-500 to-red-600',
+        'warning': 'bg-gradient-to-r from-yellow-500 to-yellow-600',
+        'info': 'bg-gradient-to-r from-blue-500 to-blue-600'
+    };
+    
+    toast.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-xl shadow-lg z-50`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'info-circle'} mr-3"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

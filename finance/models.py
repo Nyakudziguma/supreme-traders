@@ -5,8 +5,70 @@ from django.contrib.auth import get_user_model
 import random
 import string
 from decimal import Decimal
-
+from datetime import timedelta
 User = get_user_model()
+from django.core.exceptions import ValidationError
+
+
+class BillingCycle(models.Model):
+    TRANSACTION_DEPOSIT = "deposit"
+    TRANSACTION_WITHDRAWAL = "withdrawal"
+
+    TRANSACTION_TYPES = (
+        (TRANSACTION_DEPOSIT, "Deposit"),
+        (TRANSACTION_WITHDRAWAL, "Withdrawal"),
+    )
+
+    client_name = models.CharField(max_length=255)
+    start_date = models.DateField(default=now)
+    end_date = models.DateField(null=True, blank=True)
+
+    deposit_fee_rate = models.DecimalField(
+        max_digits=8, decimal_places=4, default=Decimal("0.0075")
+    )  # 0.5%
+
+    withdrawal_fee_rate = models.DecimalField(
+        max_digits=8, decimal_places=4, default=Decimal("0.01")
+    )  # 1%
+
+    transactions_count = models.PositiveIntegerField(default=0)
+    amount_due = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+
+    paid = models.BooleanField(default=False)
+
+    def add_transaction(self, amount, transaction_type):
+        """
+        Add a completed transaction to billing
+        Fee = amount × fee_rate (based on transaction type)
+        """
+        amount = Decimal(amount)
+
+        if transaction_type == self.TRANSACTION_DEPOSIT:
+            fee = amount * self.deposit_fee_rate
+
+        elif transaction_type == self.TRANSACTION_WITHDRAWAL:
+            fee = amount * self.withdrawal_fee_rate
+
+        else:
+            raise ValueError("Invalid transaction type")
+
+        self.transactions_count += 1
+        self.amount_due += fee
+        self.save()
+
+    def close_cycle(self):
+        """Mark this cycle as paid and start a new billing cycle"""
+        self.paid = True
+        self.save()
+
+        return BillingCycle.objects.create(
+            client_name=self.client_name,
+            start_date=now().date(),
+            end_date=(now() + timedelta(days=30)).date(),
+            deposit_fee_rate=self.deposit_fee_rate,
+            withdrawal_fee_rate=self.withdrawal_fee_rate,
+        )
+
 
 class TransactionCharge(models.Model):
     """Fixed charges table based on amount ranges"""
@@ -112,6 +174,7 @@ class TransactionCharge(models.Model):
         # Default fallback
         return Decimal('0.00')
 
+
 class EcoCashTransaction(models.Model):
     TRANSACTION_TYPES = (
         ('deposit', 'Deposit to Deriv'),
@@ -154,7 +217,7 @@ class EcoCashTransaction(models.Model):
     processed_at = models.DateTimeField(null=True, blank=True)
     
     # Reference number (auto-generated)
-    reference_number = models.CharField(max_length=9, unique=True, editable=False)
+    reference_number = models.CharField(max_length=20, unique=True, editable=False)
     
     # EcoCash reference from POP (for deposits)
     ecocash_reference = models.CharField(
@@ -200,26 +263,89 @@ class EcoCashTransaction(models.Model):
     def __str__(self):
         return f"{self.transaction_type.upper()} - {self.amount} {self.currency} - {self.reference_number} - {self.status}"
     
+
+    # -----------------------------
+    # ECOCASH NUMBER NORMALISATION
+    # -----------------------------
+    def clean_ecocash(self):
+        """Normalise EcoCash number into 9-digit format starting with 7."""
+        number = (self.ecocash_number or "").strip()
+
+        # Remove spaces + plus sign
+        number = number.replace(" ", "").replace("+", "")
+
+        # Accept "2637" or "26378" formats
+        if number.startswith("263"):
+            number = number[3:]
+
+        # Accept "07..." → convert to "7..."
+        if number.startswith("07"):
+            number = number[1:]
+
+        # Final validation
+        if not (number.isdigit() and len(number) == 9 and number.startswith("7")):
+            raise ValidationError("Invalid EcoCash number format")
+
+        return number
+
+
     def save(self, *args, **kwargs):
+        # Always normalise EcoCash number
+        if self.ecocash_number:
+            self.ecocash_number = self.clean_ecocash()
+
+        # Generate reference number if missing
         if not self.reference_number:
             self.reference_number = self.generate_reference_number()
         
-        # Auto-calculate charge if not set
-        if self.charge == 0 and self.amount > 0:
+        # Charge logic
+        if self.transaction_type == 'withdrawal':
+            self.charge = 0
+        elif self.charge == 0 and self.amount > 0 and self.transaction_type == 'deposit':
             self.charge = TransactionCharge.get_charge_for_amount(self.amount)
         
-        # Set initial status based on transaction type
+        # Status logic
         if self.transaction_type == 'deposit' and self.status == 'pending':
             self.status = 'awaiting_pop'
             
-        # Set processed_at when status changes to completed
         if self.status == 'completed' and not self.processed_at:
             self.processed_at = now()
+        
+        # Check new completion
+        is_new_completion = False
+        if self.pk and EcoCashTransaction.objects.filter(pk=self.pk).exists():
+            original = EcoCashTransaction.objects.get(pk=self.pk)
+            if original.status != "completed" and self.status == "completed":
+                is_new_completion = True
+        else:
+            if self.status == "completed":
+                is_new_completion = True
             
         super().save(*args, **kwargs)
+
+        # Billing cycle integration (deposit + withdrawal)
+        if is_new_completion and self.transaction_type in ["deposit", "withdrawal"]:
+            billing, created = BillingCycle.objects.get_or_create(
+                client_name="Supreme AI",
+                paid=False,
+                defaults={
+                    "start_date": now().date(),
+                    "end_date": now().date() + timedelta(days=30),
+                }
+            )
+
+            billing.add_transaction(
+                amount=self.amount,
+                transaction_type=self.transaction_type
+            )
+
     
+
+    # ------------------------------------
+    # REFERENCE NUMBER GENERATOR (UNCHANGED)
+    # ------------------------------------
     def generate_reference_number(self):
-        """Generate unique 9-character reference number: 3 letters + 6 numbers"""
+        """Generate unique 9-character reference number: 3 letters + 6 digits."""
         while True:
             letters = ''.join(random.choices(string.ascii_uppercase, k=3))
             numbers = ''.join(random.choices(string.digits, k=6))
@@ -228,31 +354,33 @@ class EcoCashTransaction(models.Model):
             if not EcoCashTransaction.objects.filter(reference_number=ref_number).exists():
                 return ref_number
     
+
+    # --------------------
+    # CALCULATED PROPERTIES
+    # --------------------
     @property
     def total_amount(self):
-        """Calculate total amount including charges"""
         if self.transaction_type == 'deposit':
             return self.amount + self.charge
-        else:  # withdrawal
-            return self.amount - self.charge
+        return self.amount
     
     @property
     def is_successful(self):
-        """Check if transaction was successful"""
         return self.status == 'completed'
     
     @property
     def requires_pop(self):
-        """Check if transaction requires proof of payment"""
         return self.transaction_type == 'deposit' and self.status == 'awaiting_pop'
     
     @property
     def can_be_cancelled(self):
-        """Check if transaction can be cancelled"""
         return self.status in ['pending', 'awaiting_pop', 'processing']
     
+
+    # -------------------------
+    # ACTION METHODS (UNCHANGED)
+    # -------------------------
     def submit_pop(self, ecocash_reference, receipt_image=None):
-        """Submit proof of payment for deposit"""
         if self.transaction_type != 'deposit':
             raise ValueError("Only deposit transactions require POP")
         
@@ -260,7 +388,6 @@ class EcoCashTransaction(models.Model):
         self.status = 'processing'
         self.save()
         
-        # Create receipt record if image provided
         if receipt_image:
             TransactionReceipt.objects.create(
                 transaction=self,
@@ -269,7 +396,6 @@ class EcoCashTransaction(models.Model):
             )
     
     def mark_deposit_completed(self, deriv_transaction_id, notes=""):
-        """Mark deposit as completed after Deriv transaction"""
         if self.transaction_type != 'deposit':
             raise ValueError("This method is for deposit transactions only")
         
@@ -281,7 +407,6 @@ class EcoCashTransaction(models.Model):
         self.save()
     
     def mark_withdrawal_completed(self, ecocash_transaction_id, notes=""):
-        """Mark withdrawal as completed after EcoCash payment"""
         if self.transaction_type != 'withdrawal':
             raise ValueError("This method is for withdrawal transactions only")
         
@@ -293,7 +418,6 @@ class EcoCashTransaction(models.Model):
         self.save()
     
     def mark_failed(self, reason=""):
-        """Mark transaction as failed"""
         self.status = 'failed'
         if reason:
             self.admin_notes = reason

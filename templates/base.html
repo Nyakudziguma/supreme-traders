@@ -7,16 +7,85 @@
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Custom Colors -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'teal-900': '#134e4a',
-                        'amber': '#f59e0b',
-                        'gold': '#fbbf24',
+                        'amber': {
+                            '50': '#fffbeb',
+                            '100': '#fef3c7',
+                            '200': '#fde68a',
+                            '300': '#fcd34d',
+                            '400': '#fbbf24',
+                            '500': '#f59e0b',
+                            '600': '#d97706',
+                            '700': '#b45309',
+                            '800': '#92400e',
+                            '900': '#78350f',
+                        },
+                        'blue': {
+                            '50': '#eff6ff',
+                            '100': '#dbeafe',
+                            '200': '#bfdbfe',
+                            '300': '#93c5fd',
+                            '400': '#60a5fa',
+                            '500': '#3b82f6',
+                            '600': '#2563eb',
+                            '700': '#1d4ed8',
+                            '800': '#1e40af',
+                            '900': '#1e3a8a',
+                        },
+                        'gold': {
+                            'light': '#fef3c7',
+                            'DEFAULT': '#fbbf24',
+                            'dark': '#f59e0b',
+                        },
+                        'primary': '#f59e0b', // Amber 500
+                        'secondary': '#3b82f6', // Blue 500
+                        'accent': '#8b5cf6', // Purple for accents
+                        'dark': '#1e293b',
+                        'light': '#f8fafc',
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                        'display': ['Poppins', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'slide-down': 'slideDown 0.3s ease-out',
+                        'slide-left': 'slideLeft 0.3s ease-out',
+                        'pulse-gold': 'pulseGold 2s infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        slideDown: {
+                            '0%': { transform: 'translateY(-10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        slideLeft: {
+                            '0%': { transform: 'translateX(-100%)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' },
+                        },
+                        pulseGold: {
+                            '0%, 100%': { 
+                                boxShadow: '0 0 0 0 rgba(245, 158, 11, 0.4)' 
+                            },
+                            '50%': { 
+                                boxShadow: '0 0 0 4px rgba(245, 158, 11, 0)' 
+                            },
+                        }
                     }
                 }
             }
@@ -24,188 +93,904 @@
     </script>
     
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #134e4a 0%, #0f766e 100%);
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            overflow-x: hidden;
         }
-        .btn-primary {
-            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+        
+        .header-gradient {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 2px solid #f59e0b;
         }
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-        }
+        
         .sidebar-gradient {
-            background: linear-gradient(180deg, #134e4a 0%, #0f766e 100%);
+            background: linear-gradient(180deg, #ffffff 0%, #fefce8 100%);
+            border-right: 1px solid #fde68a;
+        }
+        
+        .gold-border {
+            border-color: #f59e0b;
+        }
+        
+        .amber-glow {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.1);
+        }
+        
+        .stat-card {
+            background: linear-gradient(145deg, #ffffff, #fefce8);
+            border: 1px solid #fde68a;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #f59e0b, #3b82f6);
+        }
+        
+        .btn-gold {
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            color: #1e293b;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.3);
+        }
+        
+        .btn-blue {
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-blue:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
+        }
+        
+        .active-nav {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.1), rgba(251, 191, 36, 0.05));
+            border-left: 3px solid #f59e0b;
+            color: #b45309;
+        }
+        
+        .hover-card {
+            transition: all 0.3s ease;
+        }
+        
+        .hover-card:hover {
+            transform: translateY(-3px);
+            border-color: #f59e0b;
+            box-shadow: 0 20px 25px -5px rgba(245, 158, 11, 0.1), 0 10px 10px -5px rgba(245, 158, 11, 0.04);
+        }
+        
+        .text-gradient-gold {
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .text-gradient-blue {
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .notification-dot {
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            border-radius: 50%;
+            animation: pulseGold 2s infinite;
+        }
+        
+        /* Mobile sidebar overlay */
+        .mobile-sidebar-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Mobile sidebar */
+        .mobile-sidebar {
+            background: linear-gradient(180deg, #ffffff 0%, #fefce8 100%);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Mobile bottom navigation */
+        .mobile-nav {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-top: 2px solid #f59e0b;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .mobile-nav-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-nav-item.active::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            border-radius: 2px;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #fef3c7;
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #d97706, #b45309);
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-teal-900 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4">
+<body>
+    <!-- Header -->
+    <header class="header-gradient shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <!-- Logo -->
-                <div class="flex items-center">
-                    <span class="text-amber text-2xl font-bold">Supreme AI</span>
+                <!-- Left: Logo & Mobile Menu Button -->
+                <div class="flex items-center space-x-3">
+                    <!-- Mobile Menu Button (Visible on mobile) -->
+                    {% if user.is_authenticated %}
+                    <button id="mobileMenuButton" class="md:hidden p-2 text-amber-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+                        <i class="fas fa-bars text-lg"></i>
+                    </button>
+                    {% endif %}
+                    
+                    <!-- Logo -->
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-blue-500 flex items-center justify-center shadow-lg">
+                            <i class="fas fa-robot text-white"></i>
+                        </div>
+                        <div class="hidden sm:block">
+                            <h1 class="text-xl font-bold text-white font-display">Supreme AI</h1>
+                            <p class="text-amber-300 text-xs font-medium">Intelligent Trading Platform</p>
+                        </div>
+                    </div>
                 </div>
                 
-                <!-- Navigation Links -->
+                <!-- User Actions -->
                 <div class="flex items-center space-x-4">
                     {% if user.is_authenticated %}
-                        <div class="flex items-center space-x-3">
-                            <span class="text-white">Welcome, {{ user.email }}</span>
-                            <a href="{% url 'accounts:profile' %}" class="text-white hover:text-gold px-3 py-2 rounded-md">Profile</a>
-                            <a href="{% url 'accounts:logout' %}" class="text-white hover:text-gold px-3 py-2 rounded-md">Logout</a>
+                    <!-- Notification -->
+                    <div class="relative hidden sm:block">
+                        <button class="p-2 text-amber-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+                            <i class="fas fa-bell"></i>
+                        </button>
+                        <div class="notification-dot absolute top-2 right-2"></div>
+                    </div>
+                    
+                    <!-- User Profile (Hidden on mobile) -->
+                    <div class="relative hidden md:block">
+                        <button id="userMenuButton" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/10 transition-colors group">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-blue-500 flex items-center justify-center text-white font-semibold shadow-md">
+                                {{ user.email|first|upper }}
+                            </div>
+                            <div class="hidden md:block text-left">
+                                <p class="text-sm font-medium text-white">{{ user.email|truncatechars:20 }}</p>
+                                <p class="text-xs text-amber-200 capitalize">{{ user.user_type }}</p>
+                            </div>
+                            <i class="fas fa-chevron-down text-amber-200 text-xs group-hover:rotate-180 transition-transform"></i>
+                        </button>
+                        
+                        <!-- Dropdown -->
+                        <div id="userDropdown" class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-amber-200 py-2 hidden animate-slide-up">
+                            <div class="px-4 py-3 border-b border-amber-100">
+                                <p class="text-sm font-medium text-gray-900">{{ user.email }}</p>
+                                <p class="text-xs text-amber-600 capitalize mt-1">{{ user.user_type }}</p>
+                            </div>
+                            <a href="{% url 'admin_dashboard' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-amber-50">
+                                <i class="fas fa-tachometer-alt w-5 mr-3 text-amber-500"></i>
+                                Dashboard
+                            </a>
+                            <a href="{% url 'accounts:profile' %}" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-amber-50">
+                                <i class="fas fa-user-cog w-5 mr-3 text-blue-500"></i>
+                                Profile Settings
+                            </a>
+                            <div class="border-t border-amber-100 my-1"></div>
+                            <a href="{% url 'accounts:logout' %}" class="flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50">
+                                <i class="fas fa-sign-out-alt w-5 mr-3"></i>
+                                Sign Out
+                            </a>
                         </div>
+                    </div>
+                    
+                    <!-- Mobile Profile Button -->
+                    <div class="md:hidden">
+                        <button id="mobileProfileButton" class="p-2 text-amber-200 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-blue-500 flex items-center justify-center text-white font-semibold shadow-md">
+                                {{ user.email|first|upper }}
+                            </div>
+                        </button>
+                    </div>
+                    
                     {% else %}
-                        <a href="{% url 'accounts:login' %}" class="text-white hover:text-gold px-3 py-2 rounded-md">Login</a>
-                        <a href="{% url 'accounts:signup' %}" class="bg-amber text-teal-900 hover:bg-gold px-4 py-2 rounded-md font-semibold">Sign Up</a>
+                    <a href="{% url 'accounts:login' %}" class="text-amber-200 hover:text-white px-4 py-2 text-sm font-medium">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+                    </a>
+                    <a href="{% url 'accounts:signup' %}" class="btn-gold px-5 py-2.5 rounded-lg text-sm font-semibold">
+                        <i class="fas fa-rocket mr-2"></i>Get Started
+                    </a>
                     {% endif %}
                 </div>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <!-- Main Content with Sidebar -->
-    <div class="flex">
-        {% if user.is_authenticated %}
-        <!-- Sidebar -->
-        <div class="sidebar-gradient w-64 min-h-screen shadow-lg">
-            <div class="p-6">
-                <!-- User Info -->
-                <div class="flex items-center space-x-3 mb-8 p-3 bg-teal-800 rounded-lg">
-                    <div class="w-10 h-10 bg-amber rounded-full flex items-center justify-center">
-                        <span class="text-teal-900 font-bold text-sm">{{ user.email|first|upper }}</span>
+    <!-- Mobile Sidebar Overlay -->
+    <div id="mobileSidebarOverlay" class="mobile-sidebar-overlay fixed inset-0 z-40 hidden md:hidden"></div>
+
+    <!-- Mobile Sidebar -->
+    <div id="mobileSidebar" class="mobile-sidebar fixed top-0 left-0 h-full w-64 z-50 transform -translate-x-full transition-transform duration-300 md:hidden">
+        <div class="h-full flex flex-col">
+            <!-- Mobile Sidebar Header -->
+            <div class="p-6 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-blue-500 flex items-center justify-center shadow-lg">
+                            <i class="fas fa-robot text-white"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-gray-900">Supreme AI</h2>
+                            <p class="text-xs text-amber-600 font-medium">Mobile Menu</p>
+                        </div>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-white text-sm font-medium truncate">{{ user.email }}</p>
-                        <p class="text-amber text-xs capitalize">{{ user.user_type }}</p>
+                    <button id="closeMobileMenu" class="p-2 text-gray-500 hover:text-amber-600 hover:bg-amber-100 rounded-lg transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                
+                <!-- Mobile User Card -->
+                <div class="p-3 bg-gradient-to-r from-amber-50 to-blue-50 rounded-lg border border-amber-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-blue-500 flex items-center justify-center text-white font-bold shadow-md">
+                                {{ user.email|first|upper }}
+                            </div>
+                            {% if user.user_type == 'admin' %}
+                            <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-600 to-red-500 flex items-center justify-center">
+                                <i class="fas fa-crown text-white text-xs"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 truncate">{{ user.email|truncatechars:20 }}</p>
+                            <div class="flex items-center mt-1">
+                                <span class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full capitalize">
+                                    {{ user.user_type }}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Navigation Menu -->
+            <!-- Mobile Navigation -->
+            <div class="flex-1 overflow-y-auto p-4">
                 <nav class="space-y-2">
-                    <!-- Dashboard -->
-                    <a href="{% url 'accounts:dashboard' %}" 
-                       class="flex items-center space-x-3 px-3 py-3 text-white hover:bg-teal-800 rounded-lg transition duration-200 {% if request.resolver_match.url_name == 'dashboard' %}bg-teal-800 border-l-4 border-amber{% endif %}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                        </svg>
-                        <span>Dashboard</span>
+                    <p class="px-2 text-xs font-semibold text-amber-600 uppercase tracking-wider mb-3">
+                        <i class="fas fa-compass mr-2"></i>Navigation
+                    </p>
+                    
+                    <a href="{% url 'admin_dashboard' %}" 
+                       class="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if request.resolver_match.url_name == 'admin_dashboard' %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center">
+                            <i class="fas fa-home text-amber-600"></i>
+                        </div>
+                        <span class="font-medium">Dashboard</span>
                     </a>
 
-                    <!-- Finance -->
                     <a href="{% url 'finance:admin_transaction_list' %}" 
-                       class="flex items-center space-x-3 px-3 py-3 text-white hover:bg-teal-800 rounded-lg transition duration-200 {% if 'finance' in request.resolver_match.app_name %}bg-teal-800 border-l-4 border-amber{% endif %}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span>Finance</span>
+                       class="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'finance' in request.resolver_match.app_name %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center">
+                            <i class="fas fa-wallet text-blue-600"></i>
+                        </div>
+                        <span class="font-medium">Transactions</span>
+                    </a>
+<a href="{% url 'finance:client_verification_list' %}" 
+                    class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                            <i class="fas fa-user-check text-green-600"></i>
+                        </div>
+                        <span class="font-medium">Client Verification</span>
+                    </a>
+                    <a href="{% url 'finance:cashout_transaction_list' %}" 
+                    class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'cashout-transactions' in request.path %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                            <i class="fas fa-money-check-alt text-green-600"></i>
+                        </div>
+                        <span class="font-medium">CashOut Transactions</span>
+                    </a>
+                    <a href="{% url 'econet:econet_dashboard' %}" 
+                       class="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'econet' in request.resolver_match.app_name %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center">
+                            <i class="fab fa-whatsapp text-green-600"></i>
+                        </div>
+                        <span class="font-medium">Ecocash</span>
+                        <i class="fas fa-chevron-right text-xs text-gray-400 ml-auto"></i>
                     </a>
 
-                    <!-- Signals -->
-                    <a href="" 
-                       class="flex items-center space-x-3 px-3 py-3 text-white hover:bg-teal-800 rounded-lg transition duration-200 {% if 'subscriptions' in request.resolver_match.app_name %}bg-teal-800 border-l-4 border-amber{% endif %}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
-                        <span>Trading Signals</span>
+                    <a href="{% url 'signals:signal_list' %}" 
+                       class="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'signals' in request.resolver_match.app_name %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center">
+                            <i class="fas fa-signal text-purple-600"></i>
+                        </div>
+                        <span class="font-medium">Signals</span>
                     </a>
 
-                    <!-- Training -->
-                    <a href="" 
-                       class="flex items-center space-x-3 px-3 py-3 text-white hover:bg-teal-800 rounded-lg transition duration-200 {% if 'training' in request.resolver_match.app_name %}bg-teal-800 border-l-4 border-amber{% endif %}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                        </svg>
-                        <span>Training</span>
+                    <a href="{% url 'books:dashboard' %}" 
+                       class="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'books' in request.resolver_match.app_name %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center">
+                            <i class="fas fa-book text-blue-600"></i>
+                        </div>
+                        <span class="font-medium">Books</span>
                     </a>
-
-                    <!-- Books -->
-                    <a href="" 
-                       class="flex items-center space-x-3 px-3 py-3 text-white hover:bg-teal-800 rounded-lg transition duration-200 {% if 'store' in request.resolver_match.app_name %}bg-teal-800 border-l-4 border-amber{% endif %}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                        </svg>
-                        <span>Trading Books</span>
+                    <a href="{% url 'switches:switch_list' %}" 
+                    class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'switches' in request.path %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                            <i class="fas fa-toggle-on text-green-600"></i>
+                        </div>
+                        <span class="font-medium">Feature Switches</span>
                     </a>
-
-                    <!-- WhatsApp -->
-                    <a href="#" 
-                       class="flex items-center space-x-3 px-3 py-3 text-white hover:bg-teal-800 rounded-lg transition duration-200">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893-.001-3.189-1.262-6.187-3.55-8.444"/>
-                        </svg>
-                        <span>WhatsApp Bot</span>
-                    </a>
-
-                    <!-- Profile -->
-                    <a href="{% url 'accounts:profile' %}" 
-                       class="flex items-center space-x-3 px-3 py-3 text-white hover:bg-teal-800 rounded-lg transition duration-200 {% if request.resolver_match.url_name == 'profile' %}bg-teal-800 border-l-4 border-amber{% endif %}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                        </svg>
-                        <span>Profile</span>
-                    </a>
-
-                    <!-- Admin Only Section -->
-                    {% if user.user_type == 'admin' %}
-                    <div class="pt-4 mt-4 border-t border-teal-700">
-                        <p class="px-3 text-xs font-semibold text-amber uppercase tracking-wider">Admin</p>
-                        <a href="/admin/" 
-                           class="flex items-center space-x-3 px-3 py-3 text-white hover:bg-teal-800 rounded-lg transition duration-200 mt-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            <span>Admin Panel</span>
+                    <div class="pt-4 mt-4 border-t border-amber-200">
+                        <p class="px-2 text-xs font-semibold text-blue-600 uppercase tracking-wider mb-3">
+                            <i class="fas fa-cog mr-2"></i>Settings
+                        </p>
+                        <a href="{% url 'accounts:profile' %}" 
+                           class="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center">
+                                <i class="fas fa-user-edit text-blue-600"></i>
+                            </div>
+                            <span class="font-medium">Profile</span>
+                        </a>
+                        <a href="{% url 'accounts:logout' %}" 
+                           class="flex items-center space-x-3 px-3 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200 group">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center">
+                                <i class="fas fa-sign-out-alt text-red-500"></i>
+                            </div>
+                            <span class="font-medium">Sign Out</span>
                         </a>
                     </div>
-                    {% endif %}
                 </nav>
-
-                <!-- Quick Stats -->
-                <div class="mt-8 p-4 bg-teal-800 rounded-lg">
-                    <p class="text-amber text-sm font-semibold mb-2">Quick Stats</p>
-                    <div class="space-y-2 text-xs text-white">
-                        <div class="flex justify-between">
-                            <span>Active Subscriptions:</span>
-                            <span class="text-amber">{% if user.signal_subscriptions.active.count %}{{ user.signal_subscriptions.active.count }}{% else %}0{% endif %}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Total Transactions:</span>
-                            <span class="text-amber">{% if user.ecocash_transactions.count %}{{ user.ecocash_transactions.count }}{% else %}0{% endif %}</span>
-                        </div>
-                    </div>
-                </div>
             </div>
-        </div>
-        {% endif %}
 
-        <!-- Main Content Area -->
-        <div class="flex-1 {% if user.is_authenticated %}p-8{% endif %}">
-            {% if messages %}
-            <div class="mb-6">
-                {% for message in messages %}
-                <div class="{% if message.tags == 'error' %}bg-red-100 border-red-400 text-red-700{% else %}bg-green-100 border-green-400 text-green-700{% endif %} border px-4 py-3 rounded relative" role="alert">
-                    <span class="block sm:inline">{{ message }}</span>
-                </div>
-                {% endfor %}
+            <!-- Mobile Sidebar Footer -->
+            <div class="p-4 border-t border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+                <p class="text-xs text-center text-gray-600">
+                    <i class="fas fa-bolt text-amber-500 mr-1"></i>
+                    Supreme AI v2.0
+                </p>
             </div>
-            {% endif %}
-
-            {% block content %}
-            {% endblock %}
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-teal-900 text-white">
-        <div class="max-w-7xl mx-auto py-8 px-4">
-            <div class="text-center">
-                <p>&copy; 2025 Supreme AI. All rights reserved.</p>
-                <p class="mt-2 text-amber">Sell your bed and buy your dreams</p>
-            </div>
+    <!-- Mobile Bottom Navigation (for mobile) -->
+    {% if user.is_authenticated %}
+    <nav class="mobile-nav fixed bottom-0 left-0 right-0 z-40 md:hidden">
+        <div class="flex justify-around items-center h-16">
+            <a href="{% url 'admin_dashboard' %}" 
+               class="mobile-nav-item flex flex-col items-center justify-center px-2 py-2 text-amber-200 hover:text-white transition-colors {% if request.resolver_match.url_name == 'admin_dashboard' %}active text-white{% endif %}">
+                <i class="fas fa-home text-lg mb-1"></i>
+                <span class="text-xs">Home</span>
+            </a>
+            
+            <a href="{% url 'finance:admin_transaction_list' %}" 
+               class="mobile-nav-item flex flex-col items-center justify-center px-2 py-2 text-amber-200 hover:text-white transition-colors {% if 'finance' in request.resolver_match.app_name %}active text-white{% endif %}">
+                <i class="fas fa-wallet text-lg mb-1"></i>
+                <span class="text-xs">Money</span>
+            </a>
+            
+            <!-- Main Menu Button -->
+            <button id="mobileMenuCenterButton" class="mobile-nav-item relative">
+                <div class="w-14 h-14 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white -mt-4 shadow-lg hover:from-amber-600 hover:to-amber-700 transition-all">
+                    <i class="fas fa-bars text-lg"></i>
+                </div>
+            </button>
+            
+            <a href="{% url 'signals:signal_list' %}" 
+               class="mobile-nav-item flex flex-col items-center justify-center px-2 py-2 text-amber-200 hover:text-white transition-colors {% if 'signals' in request.resolver_match.app_name %}active text-white{% endif %}">
+                <i class="fas fa-signal text-lg mb-1"></i>
+                <span class="text-xs">Signals</span>
+            </a>
+            
+            <button id="mobileProfileBottomButton" class="mobile-nav-item flex flex-col items-center justify-center px-2 py-2 text-amber-200 hover:text-white transition-colors">
+                <i class="fas fa-user text-lg mb-1"></i>
+                <span class="text-xs">Profile</span>
+            </button>
         </div>
-    </footer>
+    </nav>
+    {% endif %}
+
+    <!-- Main Layout -->
+    <div class="flex">
+        {% if user.is_authenticated %}
+        <!-- Desktop Sidebar -->
+        <aside class="hidden md:flex md:flex-col md:w-64 sidebar-gradient min-h-[calc(100vh-4rem)]">
+            <div class="p-6 flex-1">
+                <!-- User Card -->
+                <div class="mb-6 p-4 bg-gradient-to-r from-amber-50 to-blue-50 rounded-xl border border-amber-200 amber-glow">
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-blue-500 flex items-center justify-center text-white font-bold shadow-md">
+                                {{ user.email|first|upper }}
+                            </div>
+                            {% if user.user_type == 'admin' %}
+                            <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-600 to-red-500 flex items-center justify-center">
+                                <i class="fas fa-crown text-white text-xs"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 truncate">{{ user.email|truncatechars:20 }}</p>
+                            <div class="flex items-center mt-1">
+                                <span class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full capitalize">
+                                    {{ user.user_type }}
+                                </span>
+                                <span class="ml-2 text-xs text-blue-600 font-medium">
+                                    <i class="fas fa-circle text-xs mr-1"></i>Online
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="space-y-1">
+                    <p class="px-3 text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">
+                        <i class="fas fa-compass mr-2"></i>Navigation
+                    </p>
+                    
+                    <a href="{% url 'admin_dashboard' %}" 
+                       class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if request.resolver_match.url_name == 'admin_dashboard' %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                            <i class="fas fa-home text-amber-600"></i>
+                        </div>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
+
+                    <a href="{% url 'finance:admin_transaction_list' %}" 
+                       class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'finance' in request.resolver_match.app_name %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                            <i class="fas fa-wallet text-blue-600"></i>
+                        </div>
+                        <span class="font-medium">Transactions</span>
+                    </a>
+
+                    <a href="{% url 'finance:client_verification_list' %}" 
+                    class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                            <i class="fas fa-user-check text-green-600"></i>
+                        </div>
+                        <span class="font-medium">Client Verification</span>
+                    </a>
+                    <a href="{% url 'finance:cashout_transaction_list' %}" 
+                    class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'cashout-transactions' in request.path %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                            <i class="fas fa-money-check-alt text-green-600"></i>
+                        </div>
+                        <span class="font-medium">CashOut Transactions</span>
+                    </a>
+                    <div class="relative group">
+                        <a href="{% url 'econet:econet_dashboard' %}" 
+                           class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 {% if 'econet' in request.resolver_match.app_name %}active-nav text-amber-700{% endif %}">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center">
+                                <i class="fab fa-whatsapp text-green-600"></i>
+                            </div>
+                            <span class="font-medium">Ecocash Transfers</span>
+                            <span class="ml-auto">
+                                <i class="fas fa-chevron-down text-xs text-gray-400 group-hover:text-amber-500 transition-transform duration-200 group-hover:rotate-180"></i>
+                            </span>
+                        </a>
+                        
+                        <!-- Submenu -->
+                        <div class="absolute left-0 right-0 top-full mt-1 ml-8 space-y-1 bg-white border border-amber-200 rounded-lg shadow-xl py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 -translate-y-2"
+                            style="min-width: 220px;">
+                            <a href="{% url 'econet:messages' %}" 
+                               class="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:text-amber-700 hover:bg-amber-50 transition-all duration-200 group">
+                                <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center">
+                                    <i class="fas fa-comment text-green-500 text-xs"></i>
+                                </div>
+                                <span>Messages</span>
+                            </a>
+                            
+                            <a href="{% url 'econet:money_transfer' %}" 
+                               class="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:text-amber-700 hover:bg-amber-50 transition-all duration-200 group">
+                                <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
+                                    <i class="fas fa-money-bill-transfer text-amber-500 text-xs"></i>
+                                </div>
+                                <span>Send Money</span>
+                            </a>
+                            
+                            <a href="{% url 'econet:transaction_history' %}" 
+                               class="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:text-amber-700 hover:bg-amber-50 transition-all duration-200 group">
+                                <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
+                                    <i class="fas fa-history text-purple-500 text-xs"></i>
+                                </div>
+                                <span>Transfer History</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <a href="{% url 'signals:signal_list' %}" 
+                       class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'signals' in request.resolver_match.app_name %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                            <i class="fas fa-signal text-purple-600"></i>
+                        </div>
+                        <span class="font-medium">Trading Signals</span>
+                    </a>
+
+                    <a href="{% url 'books:dashboard' %}" 
+                       class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'books' in request.resolver_match.app_name %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                            <i class="fas fa-book text-blue-600"></i>
+                        </div>
+                        <span class="font-medium">Books</span>
+                    </a>
+                    <a href="{% url 'switches:switch_list' %}" 
+                    class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if 'switches' in request.path %}active-nav text-amber-700{% endif %}">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                            <i class="fas fa-toggle-on text-green-600"></i>
+                        </div>
+                        <span class="font-medium">Feature Switches</span>
+                    </a>
+                    <div class="pt-4 mt-4 border-t border-amber-200">
+                        <p class="px-3 text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">
+                            <i class="fas fa-cog mr-2"></i>Settings
+                        </p>
+                        <a href="{% url 'accounts:profile' %}" 
+                           class="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 group {% if request.resolver_match.url_name == 'profile' %}active-nav text-amber-700{% endif %}">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-blue-100 flex items-center justify-center group-hover:from-amber-200 group-hover:to-blue-200">
+                                <i class="fas fa-user-edit text-blue-600"></i>
+                            </div>
+                            <span class="font-medium">Profile Settings</span>
+                        </a>
+                    </div>
+                </nav>
+
+                <!-- Quick Stats -->
+                <div class="mt-8 p-4 bg-gradient-to-r from-amber-50 to-blue-50 rounded-xl border border-amber-200">
+                    <p class="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-chart-bar text-amber-600 mr-2"></i>
+                        Trading Stats
+                    </p>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-700">Active Subscriptions</span>
+                            <span class="text-sm font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+                                {% if user.signal_subscriptions.active.count %}{{ user.signal_subscriptions.active.count }}{% else %}0{% endif %}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-gray-700">Total Transactions</span>
+                            <span class="text-sm font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                                {% if user.ecocash_transactions.count %}{{ user.ecocash_transactions.count }}{% else %}0{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar Footer -->
+            <div class="p-4 border-t border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+                <div class="text-center">
+                    <div class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-blue-500 flex items-center justify-center mx-auto mb-2">
+                        <i class="fas fa-bolt text-white text-xs"></i>
+                    </div>
+                    <p class="text-xs text-gray-600 font-medium">Supreme AI v2.0</p>
+                    <p class="text-xs text-amber-600 mt-1">Sell your bed and buy your dreams</p>
+                </div>
+            </div>
+        </aside>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main class="flex-1 min-h-[calc(100vh-4rem)] {% if user.is_authenticated %}pb-16 md:pb-0{% endif %}">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <!-- Messages -->
+                {% if messages %}
+                <div class="mb-6 space-y-3 animate-fade-in">
+                    {% for message in messages %}
+                    <div class="flex items-center justify-between p-4 rounded-xl border {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% else %}border-green-200 bg-green-50 text-green-800{% endif %}">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full {% if message.tags == 'error' %}bg-red-100 text-red-600{% else %}bg-green-100 text-green-600{% endif %} flex items-center justify-center mr-3">
+                                <i class="fas {% if message.tags == 'error' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i>
+                            </div>
+                            <span class="font-medium">{{ message }}</span>
+                        </div>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Page Header -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900 font-display">
+                                <span class="text-gradient-gold">{% block page_title %}Dashboard{% endblock %}</span>
+                            </h1>
+                            <p class="text-gray-600 mt-2 flex items-center">
+                                <i class="fas fa-arrow-right text-amber-500 mr-2"></i>
+                                {% block page_subtitle %}Welcome back to your trading dashboard{% endblock %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Block -->
+                <div class="animate-fade-in">
+                    {% block content %}
+                    <!-- Default Dashboard Content -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        <!-- Stat Card 1 -->
+                        <div class="stat-card rounded-xl p-6 hover-card">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600 font-medium">Total Profit</p>
+                                    <p class="text-2xl font-bold text-gray-900 mt-1">$12,450.75</p>
+                                </div>
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                                    <i class="fas fa-chart-line text-amber-600 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex items-center text-sm">
+                                <span class="flex items-center text-green-600 font-medium bg-green-50 px-2 py-1 rounded">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    +5.2%
+                                </span>
+                                <span class="text-gray-500 ml-2">this week</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Stat Card 2 -->
+                        <div class="stat-card rounded-xl p-6 hover-card">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600 font-medium">Active Trades</p>
+                                    <p class="text-2xl font-bold text-gray-900 mt-1">8</p>
+                                </div>
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                                    <i class="fas fa-exchange-alt text-blue-600 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex items-center text-sm">
+                                <span class="flex items-center text-amber-600 font-medium bg-amber-50 px-2 py-1 rounded">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    3 pending
+                                </span>
+                                <span class="text-gray-500 ml-2">signals</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Stat Card 3 -->
+                        <div class="stat-card rounded-xl p-6 hover-card">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-600 font-medium">Success Rate</p>
+                                    <p class="text-2xl font-bold text-gray-900 mt-1">87.5%</p>
+                                </div>
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">
+                                    <i class="fas fa-trophy text-purple-600 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex items-center text-sm">
+                                <span class="flex items-center text-green-600 font-medium bg-green-50 px-2 py-1 rounded">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    +2.3%
+                                </span>
+                                <span class="text-gray-500 ml-2">from last month</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Activity -->
+                    <div class="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm">
+                        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-900">
+                                    <i class="fas fa-history text-amber-600 mr-2"></i>
+                                    Recent Activity
+                                </h3>
+                                <a href="#" class="text-sm text-amber-600 hover:text-amber-700 font-medium flex items-center">
+                                    View all <i class="fas fa-arrow-right ml-1 text-xs"></i>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="divide-y divide-amber-100">
+                            <div class="flex items-center px-6 py-4 hover:bg-amber-50 transition-colors">
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mr-4">
+                                    <i class="fas fa-bell text-amber-600"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-gray-900 font-medium">New trading signal received</p>
+                                    <p class="text-gray-600 text-sm">BTC/USD - Buy signal at $42,150</p>
+                                </div>
+                                <span class="text-gray-500 text-sm bg-gray-100 px-2 py-1 rounded">10 min ago</span>
+                            </div>
+                            <div class="flex items-center px-6 py-4 hover:bg-blue-50 transition-colors">
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mr-4">
+                                    <i class="fas fa-check-circle text-blue-600"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-gray-900 font-medium">Trade executed</p>
+                                    <p class="text-gray-600 text-sm">ETH/USD - Sold at $2,845</p>
+                                </div>
+                                <span class="text-gray-500 text-sm bg-gray-100 px-2 py-1 rounded">1 hour ago</span>
+                            </div>
+                            <div class="flex items-center px-6 py-4 hover:bg-red-50 transition-colors">
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center mr-4">
+                                    <i class="fas fa-exclamation-triangle text-red-600"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-gray-900 font-medium">Stop loss triggered</p>
+                                    <p class="text-gray-600 text-sm">AAPL - Stopped at $172.50</p>
+                                </div>
+                                <span class="text-gray-500 text-sm bg-gray-100 px-2 py-1 rounded">3 hours ago</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endblock %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Mobile menu functionality
+        const mobileMenuButton = document.getElementById('mobileMenuButton');
+        const closeMobileMenu = document.getElementById('closeMobileMenu');
+        const mobileSidebar = document.getElementById('mobileSidebar');
+        const mobileSidebarOverlay = document.getElementById('mobileSidebarOverlay');
+        const mobileMenuCenterButton = document.getElementById('mobileMenuCenterButton');
+        const mobileProfileBottomButton = document.getElementById('mobileProfileBottomButton');
+        const mobileProfileButton = document.getElementById('mobileProfileButton');
+        
+        // User dropdown functionality (desktop)
+        const userMenuButton = document.getElementById('userMenuButton');
+        const userDropdown = document.getElementById('userDropdown');
+        
+        // Open mobile sidebar
+        function openMobileSidebar() {
+            mobileSidebar.classList.remove('-translate-x-full');
+            mobileSidebarOverlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // Close mobile sidebar
+        function closeMobileSidebar() {
+            mobileSidebar.classList.add('-translate-x-full');
+            mobileSidebarOverlay.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        
+        // Toggle mobile sidebar
+        if (mobileMenuButton) {
+            mobileMenuButton.addEventListener('click', openMobileSidebar);
+        }
+        
+        if (closeMobileMenu) {
+            closeMobileMenu.addEventListener('click', closeMobileSidebar);
+        }
+        
+        // Close sidebar when clicking overlay
+        if (mobileSidebarOverlay) {
+            mobileSidebarOverlay.addEventListener('click', closeMobileSidebar);
+        }
+        
+        // Mobile center menu button
+        if (mobileMenuCenterButton) {
+            mobileMenuCenterButton.addEventListener('click', openMobileSidebar);
+        }
+        
+        // Mobile profile button (header)
+        if (mobileProfileButton) {
+            mobileProfileButton.addEventListener('click', function() {
+                window.location.href = "{% url 'accounts:profile' %}";
+            });
+        }
+        
+        // Mobile bottom profile button
+        if (mobileProfileBottomButton) {
+            mobileProfileBottomButton.addEventListener('click', function() {
+                window.location.href = "{% url 'accounts:profile' %}";
+            });
+        }
+        
+        // User dropdown toggle (desktop)
+        if (userMenuButton) {
+            userMenuButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                userDropdown.classList.toggle('hidden');
+            });
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function() {
+            if (userDropdown && !userDropdown.classList.contains('hidden')) {
+                userDropdown.classList.add('hidden');
+            }
+        });
+        
+        // Prevent dropdown from closing when clicking inside it
+        if (userDropdown) {
+            userDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        }
+        
+        // Close mobile sidebar when clicking a link
+        document.querySelectorAll('#mobileSidebar a').forEach(link => {
+            link.addEventListener('click', closeMobileSidebar);
+        });
+        
+        // Animate cards on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.hover-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.classList.add('animate-slide-up');
+            });
+            
+            // Set active state for mobile bottom nav
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.mobile-nav-item').forEach(item => {
+                const link = item.getAttribute('href');
+                if (link && currentPath.includes(link.split('/')[1])) {
+                    item.classList.add('active');
+                }
+            });
+        });
+        
+        // Handle escape key to close mobile sidebar
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !mobileSidebar.classList.contains('-translate-x-full')) {
+                closeMobileSidebar();
+            }
+        });
+        
+        // Add padding to main content for mobile bottom nav
+        function adjustMainContentPadding() {
+            const mainContent = document.querySelector('main');
+            if (window.innerWidth < 768 && mainContent && user.is_authenticated) {
+                mainContent.style.paddingBottom = '4rem';
+            }
+        }
+        
+        // Adjust on load and resize
+        window.addEventListener('load', adjustMainContentPadding);
+        window.addEventListener('resize', adjustMainContentPadding);
+    </script>
 </body>
 </html>

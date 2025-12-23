@@ -1,0 +1,223 @@
+<!-- templates/marketing/dashboard.html -->
+{% extends 'base.html' %}
+
+{% block title %}Marketing Dashboard - Supreme AI{% endblock %}
+
+{% block page_title %}Marketing Dashboard{% endblock %}
+{% block page_subtitle %}Manage campaigns and track performance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Total Campaigns -->
+        <div class="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-amber-700 font-medium">Total Campaigns</p>
+                    <p class="text-2xl font-bold text-amber-900">{{ total_campaigns }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                    <i class="fas fa-bullhorn text-amber-600"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Active Campaigns -->
+        <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-green-700 font-medium">Active</p>
+                    <p class="text-2xl font-bold text-green-900">{{ active_campaigns }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                    <i class="fas fa-play-circle text-green-600"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sent Campaigns -->
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-blue-700 font-medium">Sent</p>
+                    <p class="text-2xl font-bold text-blue-900">{{ sent_campaigns }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                    <i class="fas fa-paper-plane text-blue-600"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scheduled -->
+        <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-purple-700 font-medium">Scheduled</p>
+                    <p class="text-2xl font-bold text-purple-900">{{ scheduled_campaigns }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center">
+                    <i class="fas fa-clock text-purple-600"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Create Campaign -->
+        <div class="bg-white rounded-xl border border-amber-200 p-6 shadow-sm">
+            <div class="text-center">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-plus text-amber-600 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Create Campaign</h3>
+                <p class="text-sm text-gray-600 mb-4">Create a new marketing campaign</p>
+                <a href="{% url 'marketing:campaign_create' %}" 
+                   class="inline-block px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition duration-200 font-medium">
+                    <i class="fas fa-plus mr-2"></i> Create New
+                </a>
+            </div>
+        </div>
+        
+        <!-- Use Template -->
+        <div class="bg-white rounded-xl border border-blue-200 p-6 shadow-sm">
+            <div class="text-center">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-file-alt text-blue-600 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Templates</h3>
+                <p class="text-sm text-gray-600 mb-4">Use pre-built templates</p>
+                <a href="{% url 'marketing:template_list' %}" 
+                   class="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition duration-200 font-medium">
+                    <i class="fas fa-eye mr-2"></i> View Templates
+                </a>
+            </div>
+        </div>
+        
+        <!-- View Analytics -->
+        <div class="bg-white rounded-xl border border-green-200 p-6 shadow-sm">
+            <div class="text-center">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-chart-line text-green-600 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Analytics</h3>
+                <p class="text-sm text-gray-600 mb-4">Track campaign performance</p>
+                <a href="{% url 'marketing:analytics' %}" 
+                   class="inline-block px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition duration-200 font-medium">
+                    <i class="fas fa-chart-bar mr-2"></i> View Analytics
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Campaigns -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">
+                    <i class="fas fa-history text-amber-600 mr-2"></i>
+                    Recent Campaigns
+                </h3>
+                <a href="{% url 'marketing:campaign_list' %}" class="text-sm text-amber-600 hover:text-amber-700 font-medium flex items-center">
+                    View all <i class="fas fa-arrow-right ml-1 text-xs"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div class="divide-y divide-amber-100">
+            {% for campaign in recent_campaigns %}
+            <div class="px-6 py-4 hover:bg-amber-50 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center">
+                            <h4 class="font-medium text-gray-900">{{ campaign.title }}</h4>
+                            <span class="ml-3 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium 
+                                {% if campaign.status == 'sent' %}bg-green-100 text-green-800
+                                {% elif campaign.status == 'scheduled' %}bg-blue-100 text-blue-800
+                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {{ campaign.get_message_type_display }}
+                            </span>
+                        </div>
+                        <div class="mt-2 flex items-center text-sm text-gray-600">
+                            <span class="mr-4">
+                                <i class="far fa-calendar mr-1"></i>
+                                {{ campaign.created_at|date:"M d, Y" }}
+                            </span>
+                            <span>
+                                <i class="fas fa-users mr-1"></i>
+                                {{ campaign.get_audience_count }} users
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <a href="{% url 'marketing:campaign_detail' campaign.pk %}" 
+                           class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+                            <i class="fas fa-eye mr-1"></i> View
+                        </a>
+                        {% if not campaign.is_sent %}
+                        <a href="{% url 'marketing:campaign_edit' campaign.pk %}" 
+                           class="text-amber-600 hover:text-amber-800 text-sm font-medium flex items-center">
+                            <i class="fas fa-edit mr-1"></i> Edit
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="px-6 py-8 text-center">
+                <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-bullhorn text-amber-400 text-xl"></i>
+                </div>
+                <p class="text-gray-500">No campaigns yet</p>
+                <p class="text-sm text-gray-400 mt-1">Create your first marketing campaign</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Top Performing Campaigns -->
+    {% if top_performing %}
+    <div class="bg-white rounded-xl border border-green-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-green-200 bg-gradient-to-r from-green-50 to-white">
+            <h3 class="text-lg font-semibold text-gray-900">
+                <i class="fas fa-trophy text-green-600 mr-2"></i>
+                Top Performing Campaigns
+            </h3>
+        </div>
+        
+        <div class="divide-y divide-green-100">
+            {% for campaign in top_performing %}
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="font-medium text-gray-900">{{ campaign.title }}</h4>
+                        <div class="mt-2 flex items-center space-x-4 text-sm">
+                            <div class="flex items-center">
+                                <div class="w-16 bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-600 h-2 rounded-full" style="width: {{ campaign.open_rate }}%"></div>
+                                </div>
+                                <span class="ml-2 text-green-700 font-medium">{{ campaign.open_rate|floatformat:1 }}%</span>
+                                <span class="ml-1 text-gray-600">Open Rate</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-16 bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: {{ campaign.click_rate }}%"></div>
+                                </div>
+                                <span class="ml-2 text-blue-700 font-medium">{{ campaign.click_rate|floatformat:1 }}%</span>
+                                <span class="ml-1 text-gray-600">Click Rate</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-900">{{ campaign.total_sent }} sent</div>
+                        <div class="text-xs text-gray-500">{{ campaign.total_delivered }} delivered</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

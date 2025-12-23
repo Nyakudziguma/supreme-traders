@@ -2,212 +2,335 @@
 
 {% block title %}Transaction Management - Supreme AI{% endblock %}
 
+{% block page_title %}Transaction Management{% endblock %}
+{% block page_subtitle %}Manage all EcoCash transactions{% endblock %}
+
+{% block page_actions %}
+<div class="flex items-center space-x-3">
+    <a href="{% url 'finance:admin_transaction_create' %}" 
+       class="btn-gold px-4 py-2.5 rounded-lg text-sm font-semibold">
+        <i class="fas fa-plus mr-2"></i>New Transaction
+    </a>
+    <a href="{% url 'finance:admin_charges_management' %}" 
+       class="btn-blue px-4 py-2.5 rounded-lg text-sm font-semibold">
+        <i class="fas fa-cog mr-2"></i>Manage Charges
+    </a>
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-3xl font-bold text-teal-900">Transaction Management</h1>
-            <p class="text-gray-600 mt-2">Manage all EcoCash transactions</p>
-        </div>
-        <div class="flex space-x-3">
-            <a href="{% url 'finance:admin_transaction_create' %}" 
-               class="bg-amber text-white px-4 py-2 rounded-lg hover:bg-gold transition duration-200 font-medium">
-                + New Transaction
-            </a>
-            <a href="{% url 'finance:admin_charges_management' %}" 
-               class="bg-teal-900 text-white px-4 py-2 rounded-lg hover:bg-teal-800 transition duration-200 font-medium">
-                Manage Charges
-            </a>
-        </div>
-    </div>
-
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-amber">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="stat-card rounded-xl p-6 hover-card">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Total Transactions</p>
-                    <p class="text-2xl font-bold text-teal-900">{{ total_count }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_count }}</p>
                 </div>
-                <div class="p-3 bg-amber-100 rounded-full">
-                    <svg class="w-6 h-6 text-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                    <i class="fas fa-exchange-alt text-amber-600 text-xl"></i>
                 </div>
+            </div>
+            <div class="mt-2">
+                <span class="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">All time</span>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-teal-900">
+        <div class="stat-card rounded-xl p-6 hover-card">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Pending</p>
-                    <p class="text-2xl font-bold text-teal-900">{{ pending_count }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ pending_count }}</p>
                 </div>
-                <div class="p-3 bg-teal-100 rounded-full">
-                    <svg class="w-6 h-6 text-teal-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
+                    <i class="fas fa-clock text-orange-600 text-xl"></i>
                 </div>
+            </div>
+            <div class="mt-2">
+                <span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">Needs action</span>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-gold">
+        <div class="stat-card rounded-xl p-6 hover-card">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Today</p>
-                    <p class="text-2xl font-bold text-teal-900">{{ today_count }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ today_count }}</p>
                 </div>
-                <div class="p-3 bg-gold-100 rounded-full">
-                    <svg class="w-6 h-6 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                    <i class="fas fa-calendar-day text-blue-600 text-xl"></i>
                 </div>
+            </div>
+            <div class="mt-2">
+                <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">{{ today|date:"M d, Y" }}</span>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-amber">
+        <div class="stat-card rounded-xl p-6 hover-card">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Total Amount</p>
-                    <p class="text-2xl font-bold text-teal-900">${{ total_amount|floatformat:2 }}</p>
+                    <p class="text-2xl font-bold text-gray-900">${{ total_amount|floatformat:2 }}</p>
                 </div>
-                <div class="p-3 bg-amber-100 rounded-full">
-                    <svg class="w-6 h-6 text-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                    <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
                 </div>
+            </div>
+            <div class="mt-2">
+                <span class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">Processed</span>
             </div>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white rounded-2xl shadow-lg p-6">
-        <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <!-- Status Filter -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select name="status" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber focus:border-amber">
-                    <option value="">All Status</option>
-                    <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>Pending</option>
-                    <option value="awaiting_pop" {% if filter_status == 'awaiting_pop' %}selected{% endif %}>Awaiting POP</option>
-                    <option value="processing" {% if filter_status == 'processing' %}selected{% endif %}>Processing</option>
-                    <option value="completed" {% if filter_status == 'completed' %}selected{% endif %}>Completed</option>
-                    <option value="failed" {% if filter_status == 'failed' %}selected{% endif %}>Failed</option>
-                    <option value="cancelled" {% if filter_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
-                </select>
-            </div>
+    <!-- Filters Card -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-filter text-amber-600 mr-2"></i>
+                Filter Transactions
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">Narrow down transactions by status, type, or date</p>
+        </div>
+        
+        <form method="get" class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <!-- Status Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select name="status" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white">
+                        <option value="">All Status</option>
+                        <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="awaiting_pop" {% if filter_status == 'awaiting_pop' %}selected{% endif %}>Awaiting POP</option>
+                        <option value="processing" {% if filter_status == 'processing' %}selected{% endif %}>Processing</option>
+                        <option value="completed" {% if filter_status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="failed" {% if filter_status == 'failed' %}selected{% endif %}>Failed</option>
+                        <option value="cancelled" {% if filter_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
 
-            <!-- Type Filter -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                <select name="type" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber focus:border-amber">
-                    <option value="">All Types</option>
-                    <option value="deposit" {% if filter_type == 'deposit' %}selected{% endif %}>Deposit</option>
-                    <option value="withdrawal" {% if filter_type == 'withdrawal' %}selected{% endif %}>Withdrawal</option>
-                </select>
-            </div>
+                <!-- Type Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select name="type" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white">
+                        <option value="">All Types</option>
+                        <option value="deposit" {% if filter_type == 'deposit' %}selected{% endif %}>Deposit</option>
+                        <option value="withdrawal" {% if filter_type == 'withdrawal' %}selected{% endif %}>Withdrawal</option>
+                    </select>
+                </div>
 
-            <!-- Date From -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
-                <input type="date" name="date_from" value="{{ filter_date_from }}" 
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber focus:border-amber">
-            </div>
+                <!-- Date From -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+                    <input type="date" name="date_from" value="{{ filter_date_from }}" 
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white">
+                </div>
 
-            <!-- Date To -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
-                <input type="date" name="date_to" value="{{ filter_date_to }}" 
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber focus:border-amber">
-            </div>
+                <!-- Date To -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                    <input type="date" name="date_to" value="{{ filter_date_to }}" 
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white">
+                </div>
 
-            <!-- Search -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                <input type="text" name="search" value="{{ filter_search }}" placeholder="Reference, Email, Phone..."
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber focus:border-amber">
+                <!-- Search -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                    <input type="text" name="search" value="{{ filter_search }}" placeholder="Reference, Email, Phone..."
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white">
+                </div>
             </div>
 
             <!-- Filter Buttons -->
-            <div class="md:col-span-5 flex space-x-3">
-                <button type="submit" class="bg-amber text-white px-6 py-2 rounded-lg hover:bg-gold transition duration-200 font-medium">
-                    Apply Filters
-                </button>
-                <a href="{% url 'finance:admin_transaction_list' %}" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition duration-200 font-medium">
-                    Clear
+            <div class="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                <a href="{% url 'finance:admin_transaction_list' %}" 
+                   class="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+                    <i class="fas fa-times mr-2"></i>Clear Filters
                 </a>
+                <button type="submit" 
+                        class="btn-gold px-5 py-2.5 rounded-lg font-semibold flex items-center">
+                    <i class="fas fa-filter mr-2"></i>Apply Filters
+                </button>
             </div>
         </form>
     </div>
 
     <!-- Transactions Table -->
-    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full">
-                <thead class="bg-gray-50">
+                <thead class="bg-gradient-to-r from-amber-50 to-white">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Charge</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-hashtag text-amber-600 mr-2 text-xs"></i>
+                                Reference
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-user text-blue-600 mr-2 text-xs"></i>
+                                User
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-exchange-alt text-purple-600 mr-2 text-xs"></i>
+                                Type
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-money-bill-wave text-green-600 mr-2 text-xs"></i>
+                                Amount
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-percentage text-gray-600 mr-2 text-xs"></i>
+                                Charge
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-circle text-orange-600 mr-2 text-xs"></i>
+                                Status
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-calendar text-blue-600 mr-2 text-xs"></i>
+                                Date
+                            </div>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-amber-200">
+                            <div class="flex items-center">
+                                <i class="fas fa-cogs text-gray-600 mr-2 text-xs"></i>
+                                Actions
+                            </div>
+                        </th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="divide-y divide-amber-100">
                     {% for transaction in page_obj %}
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-amber-50 transition-colors">
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-teal-900">{{ transaction.reference_number }}</div>
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mr-3">
+                                    <i class="fas fa-hashtag text-amber-600 text-xs"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-semibold text-gray-900">{{ transaction.reference_number }}</div>
+                                    {% if transaction.ecocash_reference %}
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        <i class="fas fa-external-link-alt mr-1"></i>{{ transaction.ecocash_reference|truncatechars:15 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900">{{ transaction.user.email|truncatechars:20 }}</div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-phone-alt mr-1"></i>{{ transaction.ecocash_number }}
+                            </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ transaction.user.email }}</div>
-                            <div class="text-sm text-gray-500">{{ transaction.user.phone_number }}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if transaction.transaction_type == 'deposit' %}bg-green-100 text-green-800{% else %}bg-blue-100 text-blue-800{% endif %}">
-                                {{ transaction.get_transaction_type_display }}
+                            {% if transaction.transaction_type == 'deposit' %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-100 to-green-50 text-green-800 border border-green-200">
+                                <i class="fas fa-arrow-down mr-1.5"></i>Deposit
                             </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-blue-50 text-blue-800 border border-blue-200">
+                                <i class="fas fa-arrow-up mr-1.5"></i>Withdrawal
+                            </span>
+                            {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">${{ transaction.amount }}</div>
-                            <div class="text-sm text-gray-500">{{ transaction.currency }}</div>
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mr-3">
+                                    <i class="fas fa-dollar-sign text-green-600"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold text-gray-900">${{ transaction.amount }}</div>
+                                    <div class="text-xs text-gray-500">{{ transaction.currency }}</div>
+                                </div>
+                            </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ${{ transaction.charge }}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${{ transaction.charge }}</div>
+                            <div class="text-xs text-gray-500">{{ transaction.charge_percentage|default:"0" }}%</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             {% with status=transaction.status %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                {% if status == 'completed' %}bg-green-100 text-green-800
-                                {% elif status == 'pending' %}bg-yellow-100 text-yellow-800
-                                {% elif status == 'awaiting_pop' %}bg-orange-100 text-orange-800
-                                {% elif status == 'processing' %}bg-blue-100 text-blue-800
-                                {% elif status == 'failed' %}bg-red-100 text-red-800
-                                {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                {{ transaction.get_status_display }}
+                            {% if status == 'completed' %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-100 to-green-50 text-green-800 border border-green-200">
+                                <i class="fas fa-check-circle mr-1.5"></i>Completed
                             </span>
+                            {% elif status == 'pending' %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 border border-yellow-200">
+                                <i class="fas fa-clock mr-1.5"></i>Pending
+                            </span>
+                            {% elif status == 'awaiting_pop' %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-orange-100 to-orange-50 text-orange-800 border border-orange-200">
+                                <i class="fas fa-hourglass-half mr-1.5"></i>Awaiting POP
+                            </span>
+                            {% elif status == 'processing' %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-blue-50 text-blue-800 border border-blue-200">
+                                <i class="fas fa-sync-alt mr-1.5"></i>Processing
+                            </span>
+                            {% elif status == 'failed' %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-red-100 to-red-50 text-red-800 border border-red-200">
+                                <i class="fas fa-times-circle mr-1.5"></i>Failed
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-gray-100 to-gray-50 text-gray-800 border border-gray-200">
+                                <i class="fas fa-ban mr-1.5"></i>Cancelled
+                            </span>
+                            {% endif %}
                             {% endwith %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {{ transaction.created_at|date:"M d, Y H:i" }}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ transaction.created_at|date:"M d, Y" }}</div>
+                            <div class="text-xs text-gray-500">{{ transaction.created_at|date:"H:i" }}</div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="{% url 'finance:admin_transaction_detail' transaction.pk %}" 
-                               class="text-amber hover:text-gold mr-3">View</a>
-                            {% if transaction.receipt %}
-                            <a href="{% url 'finance:admin_verify_receipt' transaction.receipt.pk %}" 
-                               class="text-blue-600 hover:text-blue-900">Verify POP</a>
-                            {% endif %}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center space-x-2">
+                                <a href="{% url 'finance:admin_transaction_detail' transaction.pk %}" 
+                                   class="text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 p-2 rounded-lg transition-colors"
+                                   title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if transaction.receipt %}
+                                <a href="{% url 'finance:admin_verify_receipt' transaction.receipt.pk %}" 
+                                   class="text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg transition-colors"
+                                   title="Verify POP">
+                                    <i class="fas fa-check-circle"></i>
+                                </a>
+                                {% endif %}
+                                {% if transaction.status == 'awaiting_pop' %}
+                                <button class="text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 p-2 rounded-lg transition-colors"
+                                        title="Mark as Processing">
+                                    <i class="fas fa-play-circle"></i>
+                                </button>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="px-6 py-4 text-center text-gray-500">
-                            No transactions found matching your filters.
+                        <td colspan="8" class="px-6 py-8 text-center">
+                            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-search text-gray-400 text-xl"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No transactions found</h3>
+                            <p class="text-gray-600 max-w-md mx-auto">
+                                {% if request.GET %}
+                                No transactions match your current filters. Try adjusting your search criteria.
+                                {% else %}
+                                No transactions have been recorded yet. Create your first transaction to get started.
+                                {% endif %}
+                            </p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -217,27 +340,29 @@
 
         <!-- Pagination -->
         {% if page_obj.has_other_pages %}
-        <div class="bg-white px-6 py-4 border-t border-gray-200">
+        <div class="px-6 py-4 border-t border-amber-200 bg-gradient-to-r from-amber-50 to-white">
             <div class="flex items-center justify-between">
                 <div class="text-sm text-gray-700">
-                    Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} results
+                    <span class="font-medium">{{ page_obj.start_index }}</span> to 
+                    <span class="font-medium">{{ page_obj.end_index }}</span> of 
+                    <span class="font-medium">{{ page_obj.paginator.count }}</span> results
                 </div>
-                <div class="flex space-x-2">
+                <div class="flex items-center space-x-2">
                     {% if page_obj.has_previous %}
                     <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
-                       class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        Previous
+                       class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center">
+                        <i class="fas fa-chevron-left mr-1.5 text-xs"></i> Previous
                     </a>
                     {% endif %}
 
                     {% for num in page_obj.paginator.page_range %}
                     {% if page_obj.number == num %}
-                    <span class="px-3 py-1 border border-amber bg-amber text-white rounded-md text-sm font-medium">
+                    <span class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg text-sm font-semibold">
                         {{ num }}
                     </span>
                     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                     <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
-                       class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                       class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                         {{ num }}
                     </a>
                     {% endif %}
@@ -245,8 +370,8 @@
 
                     {% if page_obj.has_next %}
                     <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
-                       class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        Next
+                       class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center">
+                        Next <i class="fas fa-chevron-right ml-1.5 text-xs"></i>
                     </a>
                     {% endif %}
                 </div>
@@ -255,4 +380,16 @@
         {% endif %}
     </div>
 </div>
+
+<style>
+    /* Ensure table is responsive */
+    @media (max-width: 1024px) {
+        table {
+            min-width: 1024px;
+        }
+        .overflow-x-auto {
+            overflow-x: auto;
+        }
+    }
+</style>
 {% endblock %}

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Book - Supreme AI{% endblock %}
+
+{% block page_title %}Add New Book{% endblock %}
+{% block page_subtitle %}Share your knowledge with the community{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto animate-fade-in">
+    <div class="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+            <h3 class="text-lg font-semibold text-gray-900">
+                <i class="fas fa-plus-circle text-amber-600 mr-2"></i>
+                Book Details
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">Fill in the details below to add a new book</p>
+        </div>
+        
+        <form method="POST" enctype="multipart/form-data" class="p-6 space-y-6">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="p-4 rounded-lg border border-red-200 bg-red-50 text-red-800">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-3 text-lg"></i>
+                    <div>
+                        <p class="font-medium">Please correct the errors below:</p>
+                        <ul class="mt-2 text-sm list-disc pl-5 space-y-1">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ field|title }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Book Title -->
+            <div>
+                <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-heading text-amber-500 mr-2"></i>
+                    Book Title *
+                </label>
+                {{ form.title }}
+                <p class="mt-1 text-xs text-gray-500">Enter a descriptive title for your book</p>
+            </div>
+            
+            <!-- Description -->
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-align-left text-blue-500 mr-2"></i>
+                    Description
+                </label>
+                {{ form.description }}
+                <p class="mt-1 text-xs text-gray-500">Briefly describe what the book is about</p>
+            </div>
+            
+            <!-- File Upload -->
+            <div>
+                <label for="{{ form.file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-file-upload text-purple-500 mr-2"></i>
+                    Book File *
+                </label>
+                {{ form.file }}
+                <p class="mt-1 text-xs text-gray-500">Upload PDF, EPUB, MOBI, DOC, DOCX, or TXT (max 50MB)</p>
+            </div>
+            
+            <!-- Price & Payment Settings -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="{{ form.price.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-dollar-sign text-green-500 mr-2"></i>
+                        Price (USD)
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500">$</span>
+                        </div>
+                        {{ form.price }}
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Set price to 0 for free books</p>
+                </div>
+                
+                <div>
+                    <div class="flex items-center h-full">
+                        <div class="flex items-center">
+                            {{ form.is_paid }}
+                            <label for="{{ form.is_paid.id_for_label }}" class="ml-3 text-sm font-medium text-gray-700">
+                                Paid Book
+                            </label>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Enable to charge for this book</p>
+                </div>
+            </div>
+            
+            <!-- Featured Book -->
+            <div>
+                <div class="flex items-center">
+                    {{ form.is_featured }}
+                    <label for="{{ form.is_featured.id_for_label }}" class="ml-3 text-sm font-medium text-gray-700">
+                        <i class="fas fa-star text-amber-500 mr-2"></i>
+                        Featured Book
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="{% url 'books:list' %}" 
+                   class="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>Cancel
+                </a>
+                
+                <button type="submit" 
+                        class="btn-gold px-8 py-3 rounded-lg font-semibold text-lg">
+                    <i class="fas fa-save mr-2"></i>Add Book
+                </button>
+            </div>
+        </form>
+    </div>
+    
+</div>
+
+<script>
+    // Toggle price field based on paid status
+    document.getElementById('{{ form.is_paid.id_for_label }}').addEventListener('change', function() {
+        const priceField = document.getElementById('{{ form.price.id_for_label }}');
+        if (this.checked) {
+            priceField.required = true;
+            priceField.placeholder = 'Enter price';
+        } else {
+            priceField.required = false;
+            priceField.value = '';
+            priceField.placeholder = '0.00';
+        }
+    });
+    
+    // File size validation
+    document.getElementById('{{ form.file.id_for_label }}').addEventListener('change', function() {
+        const file = this.files[0];
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        
+        if (file && file.size > maxSize) {
+            alert('File size must be under 50MB');
+            this.value = '';
+        }
+    });
+</script>
+{% endblock %}

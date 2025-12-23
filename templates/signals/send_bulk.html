@@ -1,0 +1,228 @@
+<!-- templates/signals/send_bulk.html -->
+{% extends 'base.html' %}
+
+{% block title %}Send Bulk Signal - Supreme AI{% endblock %}
+
+{% block page_title %}Send Signal to Subscribers{% endblock %}
+{% block page_subtitle %}Broadcast "{{ signal.title }}" to active subscribers{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Signal Summary -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">{{ signal.title }}</h3>
+                <div class="flex items-center space-x-3 mt-2">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold 
+                        {% if signal.signal_type == 'buy' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                        <i class="fas {% if signal.signal_type == 'buy' %}fa-arrow-up{% else %}fa-arrow-down{% endif %} mr-1"></i>
+                        {{ signal.get_signal_type_display }}
+                    </span>
+                    <span class="text-sm text-gray-600">{{ signal.asset_pair }} ({{ signal.get_market_type_display }})</span>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-sm text-gray-500">Signal ID</div>
+                <div class="font-mono text-amber-600 font-semibold">{{ signal.signal_id }}</div>
+            </div>
+        </div>
+        
+        <!-- Trade Details -->
+        <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="p-3 bg-gray-50 rounded-lg">
+                <div class="text-xs text-gray-500">Stop Loss</div>
+                <div class="font-semibold text-gray-900">{{ signal.stop_loss }}</div>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+                <div class="text-xs text-gray-500">Take Profit</div>
+                <div class="font-semibold text-gray-900">{{ signal.take_profit }}</div>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+                <div class="text-xs text-gray-500">Lot Size</div>
+                <div class="font-semibold text-gray-900">{{ signal.lot_size }}</div>
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+                <div class="text-xs text-gray-500">Confidence</div>
+                <div class="font-semibold text-gray-900">{{ signal.confidence }}%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Send Form -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-blue-50 to-white">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-broadcast-tower text-blue-600 mr-2"></i>
+                Select Recipients
+            </h3>
+        </div>
+        
+        <form method="post" class="p-6">
+            {% csrf_token %}
+            
+            <!-- Recipient Selection -->
+            <div class="space-y-6">
+                <!-- Option 1: Send to All Active -->
+                <div class="p-4 border border-gray-300 rounded-lg hover:border-blue-400 transition-colors">
+                    <div class="flex items-start">
+                        <input type="radio" 
+                               name="send_option" 
+                               id="send_all" 
+                               value="all"
+                               class="mt-1 mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500">
+                        <div class="flex-1">
+                            <label for="send_all" class="block text-sm font-medium text-gray-900">
+                                Send to All Active Subscribers
+                            </label>
+                            <p class="text-sm text-gray-600 mt-1">
+                                Send this signal to all {{ total_active }} active subscribers across all plans.
+                            </p>
+                            <div class="mt-2 text-sm text-gray-500">
+                                <i class="fas fa-users mr-1"></i> Total active subscribers: {{ total_active }}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                All Plans
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Option 2: Send by Plan -->
+                <div class="space-y-4">
+                    <div class="text-sm font-medium text-gray-900 mb-2">Or send to specific subscription plans:</div>
+                    
+                    {% for plan in plans %}
+                    {% with count=plan_counts|get_item:plan.id %}
+                    {% if count > 0 %}
+                    <div class="p-4 border border-gray-300 rounded-lg hover:border-amber-400 transition-colors">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <input type="radio" 
+                                       name="send_option" 
+                                       id="plan_{{ plan.id }}" 
+                                       value="plan_{{ plan.id }}"
+                                       class="mr-3 h-4 w-4 text-amber-600 focus:ring-amber-500">
+                                <div>
+                                    <label for="plan_{{ plan.id }}" class="block text-sm font-medium text-gray-900">
+                                        {{ plan.plan_name }}
+                                    </label>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        {{ count }} active subscribers
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-semibold text-amber-600">${{ plan.price }}</div>
+                                <div class="text-xs text-gray-500">{{ plan.duration_days }} days</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+
+                <!-- Message Preview -->
+                <div class="border-t border-gray-200 pt-6">
+                    <h4 class="text-sm font-semibold text-gray-900 mb-4">WhatsApp Message Preview</h4>
+                    <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <pre class="text-sm text-gray-700 whitespace-pre-wrap">{{ signal.get_formatted_message }}</pre>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        This is exactly how the message will appear in WhatsApp
+                    </div>
+                </div>
+
+                <!-- Confirmation -->
+                <div class="border-t border-gray-200 pt-6">
+                    <div class="flex items-center mb-4">
+                        <input type="checkbox" 
+                               id="confirm_send" 
+                               required
+                               class="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded">
+                        <label for="confirm_send" class="ml-2 block text-sm text-gray-900">
+                            I confirm that I want to send this trading signal to the selected subscribers.
+                        </label>
+                    </div>
+                    
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-triangle text-amber-600 mr-3"></i>
+                            <div class="text-sm text-amber-800">
+                                <strong>Important:</strong> Once sent, this signal cannot be recalled. 
+                                Ensure all trading parameters are correct before sending.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex justify-end space-x-3">
+                    <a href="{% url 'signals:signal_detail' signal.pk %}" 
+                       class="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                            class="btn-gold px-5 py-2.5 rounded-lg font-semibold flex items-center">
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        Send to Selected Subscribers
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const confirmCheckbox = document.getElementById('confirm_send');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    // Update submit button text based on selection
+    function updateSubmitButton() {
+        const selectedOption = document.querySelector('input[name="send_option"]:checked');
+        if (selectedOption) {
+            if (selectedOption.value === 'all') {
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Send to All Active Subscribers';
+            } else {
+                const planName = selectedOption.nextElementSibling?.querySelector('label')?.textContent || 'Plan';
+                submitBtn.innerHTML = `<i class="fas fa-paper-plane mr-2"></i> Send to ${planName} Subscribers`;
+            }
+        }
+    }
+    
+    // Add event listeners to radio buttons
+    document.querySelectorAll('input[name="send_option"]').forEach(radio => {
+        radio.addEventListener('change', updateSubmitButton);
+    });
+    
+    // Initial update
+    updateSubmitButton();
+    
+    // Form submission
+    form.addEventListener('submit', function(event) {
+        if (!confirmCheckbox.checked) {
+            event.preventDefault();
+            alert('Please confirm that you want to send this signal.');
+            return;
+        }
+        
+        const selectedOption = document.querySelector('input[name="send_option"]:checked');
+        if (!selectedOption) {
+            event.preventDefault();
+            alert('Please select recipients for this signal.');
+            return;
+        }
+        
+        // Show loading state
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sending...';
+        submitBtn.disabled = true;
+    });
+});
+</script>
+
+{% endblock %}

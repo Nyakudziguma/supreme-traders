@@ -1,0 +1,567 @@
+{% extends "base.html" %}
+
+{% block title %}Messages - Econet{% endblock %}
+
+{% block page_title %}Messages{% endblock %}
+{% block page_subtitle %}View and manage all your Econet messages{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-1 gap-6 animate-fade-in">
+    <!-- Left Column - Message List -->
+    <div class="lg:col-span-3">
+        <div class="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm">
+            <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-inbox text-amber-600 mr-2"></i>
+                        All Messages
+                    </h3>
+                    <div class="flex items-center space-x-3">
+                        <!-- Search -->
+                        <div class="relative">
+                            <input type="text" 
+                                   placeholder="Search messages..." 
+                                   class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500 text-sm">
+                            <div class="absolute left-3 top-2.5">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                        </div>
+                        <!-- Filter -->
+                        <select class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                            <option value="all">All Messages</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Messages Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <input type="checkbox" class="rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sender</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for message in econet_messages %}
+                        <tr class="hover:bg-gray-50 transition-colors {% if not forloop.counter|divisibleby:2 %}bg-gray-50{% endif %}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <input type="checkbox" class="rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br 
+                                        {% cycle 'from-green-100 to-green-200' 'from-blue-100 to-blue-200' 'from-purple-100 to-purple-200' 'from-amber-100 to-amber-200' %}
+                                        flex items-center justify-center mr-3">
+                                        <i class="fas fa-user text-gray-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">{{ message.sender_id }}</p>
+                                        <p class="text-xs text-gray-500">Econet Number</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="max-w-md">
+                                    <p class="text-gray-900 font-medium truncate">
+                                        {{ message.message_body|truncatechars:60 }}
+                                    </p>
+                                    {% if message.message_body|length > 60 %}
+                                    <button class="text-xs text-amber-600 hover:text-amber-700 mt-1" 
+                                            onclick="toggleMessage({{ forloop.counter }})">
+                                        Read more
+                                    </button>
+                                    <div id="full-message-{{ forloop.counter }}" class="hidden mt-2 p-3 bg-gray-100 rounded-lg">
+                                        <p class="text-gray-700">{{ message.message_body }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">
+                                    {{ message.received_at|date:"M d, Y" }}
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    {{ message.received_at|time:"H:i" }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex items-center space-x-3">
+                                    <a href="#" 
+                                       class="text-blue-600 hover:text-blue-900"
+                                       onclick="replyToMessage('{{ message.sender_id }}')">
+                                        <i class="fas fa-reply"></i>
+                                    </a>
+                                    <a href="#" 
+                                       class="text-green-600 hover:text-green-900"
+                                       onclick="forwardMessage({{ message.id }})">
+                                        <i class="fas fa-share"></i>
+                                    </a>
+                                    <a href="#" 
+                                       class="text-red-600 hover:text-red-900"
+                                       onclick="deleteMessage({{ message.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center">
+                                <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-inbox text-gray-400 text-xl"></i>
+                                </div>
+                                <p class="text-gray-500">No messages yet</p>
+                                <p class="text-sm text-gray-400 mt-1">Messages will appear here when received via Econet</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if econet_messages.has_other_pages %}
+            <div class="px-6 py-4 border-t border-amber-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                        Showing <span class="font-medium">{{ econet_messages.start_index }}</span> to 
+                        <span class="font-medium">{{ econet_messages.end_index }}</span> of 
+                        <span class="font-medium">{{ econet_messages.paginator.count }}</span> messages
+                    </div>
+                    <div class="flex space-x-2">
+                        {% if econet_messages.has_previous %}
+                        <a href="?page={{ econet_messages.previous_page_number }}" 
+                        class="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                        {% endif %}
+                        
+                        {% for num in econet_messages.paginator.page_range %}
+                            {% if econet_messages.number == num %}
+                            <span class="px-3 py-2 rounded-lg bg-amber-600 text-white font-medium">
+                                {{ num }}
+                            </span>
+                            {% elif num > econet_messages.number|add:'-3' and num < econet_messages.number|add:'3' %}
+                            <a href="?page={{ num }}" 
+                            class="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">
+                                {{ num }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if econet_messages.has_next %}
+                        <a href="?page={{ econet_messages.next_page_number }}" 
+                        class="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        
+        <!-- Bulk Actions -->
+        <div class="mt-6 bg-white rounded-xl border border-amber-200 p-4 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-700">Selected: <span id="selected-count">0</span> messages</span>
+                    <select id="bulk-action" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                        <option value="">Bulk Actions</option>
+                        <option value="mark_read">Mark as Read</option>
+                        <option value="mark_unread">Mark as Unread</option>
+                        <option value="delete">Delete</option>
+                        <option value="archive">Archive</option>
+                    </select>
+                    <button id="apply-bulk-action" 
+                            class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium">
+                        Apply
+                    </button>
+                </div>
+                <button class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                    <i class="fas fa-sync-alt mr-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - Quick Actions & Stats -->
+    <div class="space-y-6">
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl border border-amber-200 p-6 shadow-sm">
+            <h4 class="font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-bolt text-amber-600 mr-2"></i>
+                Quick Actions
+            </h4>
+            <div class="space-y-3">
+                
+                
+                <a href="{% url 'econet:money_transfer' %}" 
+                   class="block w-full flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-lg hover:border-amber-300 transition-all group">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-money-bill-transfer text-amber-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Send Money</p>
+                            <p class="text-sm text-gray-600">Quick money transfer</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-amber-400 group-hover:text-amber-600"></i>
+                </a>
+                
+            </div>
+        </div>
+
+        <!-- Message Stats -->
+        <div class="bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-200 p-6">
+            <h4 class="font-semibold text-gray-900 mb-6 flex items-center">
+                <i class="fas fa-chart-bar text-blue-600 mr-2"></i>
+                Message Stats
+            </h4>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                            <i class="fas fa-inbox text-blue-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">Total Messages</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ messages.paginator.count|default:0 }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-600">Today</span>
+                            <span class="font-medium text-gray-900">
+                                {% with today=messages|slice:":10" %}{{ today|length }}{% endwith %}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-green-600 h-2 rounded-full" style="width: 30%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-600">This Week</span>
+                            <span class="font-medium text-gray-900">
+                                {% with week=messages|slice:":50" %}{{ week|length }}{% endwith %}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: 60%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-600">This Month</span>
+                            <span class="font-medium text-gray-900">{{ messages.paginator.count|default:0 }}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-purple-600 h-2 rounded-full" style="width: 90%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Senders -->
+        <div class="bg-white rounded-xl border border-amber-200 p-6 shadow-sm">
+            <h4 class="font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-users text-green-600 mr-2"></i>
+                Recent Senders
+            </h4>
+            <div class="space-y-3">
+                {% for message in messages|slice:":5" %}
+                <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br 
+                            {% cycle 'from-green-100 to-green-200' 'from-blue-100 to-blue-200' 'from-purple-100 to-purple-200' 'from-amber-100 to-amber-200' 'from-red-100 to-red-200' %}
+                            flex items-center justify-center mr-3">
+                            <span class="text-xs font-medium text-gray-700">{{ message.sender_id|slice:":1"|upper }}</span>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ message.sender_id }}</p>
+                            <p class="text-xs text-gray-500">{{ message.received_at|timesince }} ago</p>
+                        </div>
+                    </div>
+                    <button onclick="replyToMessage('{{ message.sender_id }}')" 
+                            class="text-amber-600 hover:text-amber-700">
+                        <i class="fas fa-reply"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Message Modal -->
+<div id="newMessageModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-xl bg-white animate-slide-up">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">
+                <i class="fas fa-comment-dots text-green-600 mr-2"></i>
+                New Message
+            </h3>
+            <button onclick="closeNewMessageModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form id="newMessageForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-phone text-blue-500 mr-2"></i>
+                    Phone Number
+                </label>
+                <input type="text" 
+                       id="recipientNumber"
+                       placeholder="077XXXXXXX"
+                       class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-comment text-green-500 mr-2"></i>
+                    Message
+                </label>
+                <textarea id="messageContent" 
+                          rows="4"
+                          placeholder="Type your message here..."
+                          class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all"></textarea>
+                <p class="text-xs text-gray-500 mt-1">
+                    <span id="charCount">0</span>/160 characters
+                </p>
+            </div>
+            
+            <div class="flex justify-end space-x-3 pt-4">
+                <button type="button" 
+                        onclick="closeNewMessageModal()"
+                        class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-paper-plane mr-2"></i>Send
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Toggle full message view
+    function toggleMessage(messageId) {
+        const element = document.getElementById(`full-message-${messageId}`);
+        element.classList.toggle('hidden');
+    }
+    
+    // Reply to message
+    function replyToMessage(senderId) {
+        showNewMessageModal();
+        document.getElementById('recipientNumber').value = senderId;
+        document.getElementById('recipientNumber').focus();
+    }
+    
+    // Forward message
+    function forwardMessage(messageId) {
+        alert(`Forwarding message ${messageId} - This would open forward dialog in a real implementation`);
+    }
+    
+    // Delete message
+    function deleteMessage(messageId) {
+        if (confirm('Are you sure you want to delete this message?')) {
+            // Send delete request
+            fetch(`/api/messages/${messageId}/delete/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Failed to delete message: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+            });
+        }
+    }
+    
+    // New message modal functions
+    function showNewMessageModal() {
+        document.getElementById('newMessageModal').classList.remove('hidden');
+        document.getElementById('recipientNumber').focus();
+    }
+    
+    function closeNewMessageModal() {
+        document.getElementById('newMessageModal').classList.add('hidden');
+        document.getElementById('newMessageForm').reset();
+        document.getElementById('charCount').textContent = '0';
+    }
+    
+    // Character count for message
+    document.getElementById('messageContent').addEventListener('input', function() {
+        const charCount = this.value.length;
+        document.getElementById('charCount').textContent = charCount;
+        
+        if (charCount > 160) {
+            document.getElementById('charCount').classList.add('text-red-600');
+        } else {
+            document.getElementById('charCount').classList.remove('text-red-600');
+        }
+    });
+    
+    // Handle new message form submission
+    document.getElementById('newMessageForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const recipient = document.getElementById('recipientNumber').value;
+        const message = document.getElementById('messageContent').value;
+        
+        if (!recipient || !message) {
+            alert('Please enter recipient and message');
+            return;
+        }
+        
+        if (message.length > 160) {
+            alert('Message cannot exceed 160 characters');
+            return;
+        }
+        
+        // Send message via API
+        fetch('{% url "econet:api_send_message" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                recipient: recipient,
+                message: message
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Message sent successfully!');
+                closeNewMessageModal();
+                location.reload(); // Refresh to show new message
+            } else {
+                alert('Failed to send message: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error.message);
+        });
+    });
+    
+    // Bulk actions
+    document.getElementById('apply-bulk-action').addEventListener('click', function() {
+        const action = document.getElementById('bulk-action').value;
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+        const messageIds = Array.from(checkboxes).map(cb => cb.closest('tr').dataset.messageId);
+        
+        if (!action) {
+            alert('Please select a bulk action');
+            return;
+        }
+        
+        if (messageIds.length === 0) {
+            alert('Please select messages to perform action');
+            return;
+        }
+        
+        // Perform bulk action via API
+        fetch('{% url "econet:api_bulk_action" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                action: action,
+                message_ids: messageIds
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Successfully performed ${action} on ${messageIds.length} messages`);
+                location.reload();
+            } else {
+                alert('Bulk action failed: ' + data.error);
+            }
+        });
+    });
+    
+    // Update selected count
+    document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const selectedCount = document.querySelectorAll('input[type="checkbox"]:checked').length;
+            document.getElementById('selected-count').textContent = selectedCount;
+        });
+    });
+    
+    // Broadcast modal
+    function showBroadcastModal() {
+        alert('Broadcast feature would open in a real implementation');
+    }
+    
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add message IDs to table rows for bulk actions
+        document.querySelectorAll('tbody tr').forEach((row, index) => {
+            if (index > 0) { // Skip header row
+                row.dataset.messageId = index;
+            }
+        });
+    });
+</script>
+
+<style>
+    /* Custom styles for messages */
+    .message-row:hover {
+        background-color: #fffbeb;
+        cursor: pointer;
+    }
+    
+    .message-unread {
+        background-color: #eff6ff;
+        border-left: 3px solid #3b82f6;
+    }
+    
+    .message-unread:hover {
+        background-color: #dbeafe;
+    }
+    
+    /* Smooth transitions */
+    .transition-all {
+        transition: all 0.3s ease;
+    }
+    
+    /* Modal backdrop */
+    .modal-backdrop {
+        backdrop-filter: blur(4px);
+    }
+</style>
+{% endblock %}

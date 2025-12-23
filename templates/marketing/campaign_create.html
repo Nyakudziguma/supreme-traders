@@ -1,0 +1,544 @@
+<!-- templates/marketing/campaign_create.html -->
+{% extends 'base.html' %}
+
+{% block title %}Create Campaign - Supreme AI{% endblock %}
+
+{% block page_title %}Create Marketing Campaign{% endblock %}
+{% block page_subtitle %}Create and send messages to your users{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Campaign Form -->
+    <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+        <div class="p-6">
+            <form method="post" action="{% url 'marketing:campaign_create' %}" enctype="multipart/form-data" id="campaignForm">
+                {% csrf_token %}
+                
+                <!-- Campaign Basics -->
+                <div class="space-y-6">
+                    <!-- Title -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-heading text-amber-600 mr-2"></i>
+                            Campaign Title *
+                        </label>
+                        <input type="text" 
+                               name="title" 
+                               required
+                               class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200"
+                               placeholder="Enter campaign title"
+                               maxlength="255">
+                        <p class="text-xs text-gray-500 mt-1">A descriptive title for your campaign</p>
+                    </div>
+                    
+                    <!-- Message Type and Audience -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Message Type -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-envelope text-blue-600 mr-2"></i>
+                                Message Type *
+                            </label>
+                            <select name="message_type" 
+                                    required
+                                    class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                                <option value="marketing">Marketing Campaign</option>
+                                <option value="transaction_success">Transaction Success</option>
+                                <option value="transaction_failed">Transaction Failed</option>
+                                <option value="promotional">Promotional Offer</option>
+                                <option value="educational">Educational Content</option>
+                                <option value="system">System Notification</option>
+                                <option value="welcome">Welcome Message</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Audience Type -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-users text-green-600 mr-2"></i>
+                                Target Audience *
+                            </label>
+                            <select name="audience_type" 
+                                    required
+                                    class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                                <option value="all_users">All Users</option>
+                                <option value="active_users">Active Users (Last 30 days)</option>
+                                <option value="new_users">New Users (Last 7 days)</option>
+                                <option value="verified_users">Verified Users</option>
+                                <option value="unverified_users">Unverified Users</option>
+                                <option value="depositors">Users with Deposits</option>
+                                <option value="withdrawers">Users with Withdrawals</option>
+                            </select>
+                            <div id="audienceCount" class="mt-2 text-sm text-gray-600">
+                                <i class="fas fa-spinner fa-spin mr-2"></i> Calculating audience size...
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Message Content -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-comment-dots text-purple-600 mr-2"></i>
+                            Message Content *
+                        </label>
+                        <div class="mb-4">
+                            <div class="flex space-x-2 mb-2">
+                                <button type="button" onclick="insertVariable('{user_name}')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200">
+                                    {user_name}
+                                </button>
+                                <button type="button" onclick="insertVariable('{amount}')" class="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm hover:bg-green-200">
+                                    {amount}
+                                </button>
+                                <button type="button" onclick="insertVariable('{transaction_id}')" class="px-3 py-1 bg-amber-100 text-amber-700 rounded-lg text-sm hover:bg-amber-200">
+                                    {transaction_id}
+                                </button>
+                                <button type="button" onclick="insertVariable('{date}')" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm hover:bg-purple-200">
+                                    {date}
+                                </button>
+                            </div>
+                        </div>
+                        <textarea name="content" 
+                                  id="messageContent"
+                                  required
+                                  rows="8"
+                                  class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 resize-none font-mono text-sm"
+                                  placeholder="Enter your message here..."></textarea>
+                        <div class="flex justify-between items-center mt-2">
+                            <p class="text-xs text-gray-500">Supports variables: {user_name}, {amount}, {transaction_id}, {date}</p>
+                            <div class="text-xs text-gray-500">
+                                <span id="charCount">0</span>/2000 characters
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Media Uploads -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-4">
+                            <i class="fas fa-image text-pink-600 mr-2"></i>
+                            Media & Attachments (Optional)
+                        </label>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Image -->
+                            <div class="border-2 border-dashed border-amber-300 rounded-xl p-6 hover:border-amber-400 transition-colors">
+                                <div class="text-center">
+                                    <div class="w-16 h-16 rounded-full bg-gradient-to-br from-pink-100 to-pink-200 flex items-center justify-center mx-auto mb-4">
+                                        <i class="fas fa-image text-pink-600 text-2xl"></i>
+                                    </div>
+                                    <h5 class="font-medium text-gray-900 mb-2">Campaign Image</h5>
+                                    <p class="text-sm text-gray-600 mb-4">Optional image to include with message</p>
+                                    
+                                    <div class="relative">
+                                        <input type="file" 
+                                               name="image"
+                                               id="imageInput"
+                                               accept="image/*"
+                                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                        <label for="imageInput" 
+                                               class="block px-4 py-2 bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-lg hover:from-pink-600 hover:to-pink-700 transition duration-200 cursor-pointer text-center">
+                                            <i class="fas fa-upload mr-2"></i> Choose Image
+                                        </label>
+                                    </div>
+                                    <div id="imagePreview" class="mt-4 hidden">
+                                        <p class="text-sm text-green-600 mb-2">Image selected:</p>
+                                        <div class="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+                                            <span id="imageFilename" class="text-sm font-medium text-green-800"></span>
+                                            <button type="button" 
+                                                    onclick="clearFile('imageInput')"
+                                                    class="text-red-500 hover:text-red-700">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Attachment -->
+                            <div class="border-2 border-dashed border-amber-300 rounded-xl p-6 hover:border-amber-400 transition-colors">
+                                <div class="text-center">
+                                    <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mx-auto mb-4">
+                                        <i class="fas fa-paperclip text-blue-600 text-2xl"></i>
+                                    </div>
+                                    <h5 class="font-medium text-gray-900 mb-2">Attachment</h5>
+                                    <p class="text-sm text-gray-600 mb-4">Optional file attachment (PDF, DOC, etc.)</p>
+                                    
+                                    <div class="relative">
+                                        <input type="file" 
+                                               name="attachment"
+                                               id="attachmentInput"
+                                               class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                        <label for="attachmentInput" 
+                                               class="block px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition duration-200 cursor-pointer text-center">
+                                            <i class="fas fa-upload mr-2"></i> Choose File
+                                        </label>
+                                    </div>
+                                    <div id="attachmentPreview" class="mt-4 hidden">
+                                        <p class="text-sm text-green-600 mb-2">File selected:</p>
+                                        <div class="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+                                            <span id="attachmentFilename" class="text-sm font-medium text-green-800"></span>
+                                            <button type="button" 
+                                                    onclick="clearFile('attachmentInput')"
+                                                    class="text-red-500 hover:text-red-700">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Scheduling -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-4">
+                            <i class="fas fa-clock text-amber-600 mr-2"></i>
+                            Scheduling Options
+                        </label>
+                        
+                        <div class="space-y-4">
+                            <!-- Send Immediately -->
+                            <div class="flex items-center">
+                                <input type="radio" 
+                                       id="sendImmediately" 
+                                       name="send_immediately" 
+                                       value="true"
+                                       checked
+                                       class="w-5 h-5 text-amber-600 focus:ring-amber-500 border-amber-300"
+                                       onclick="toggleScheduling(false)">
+                                <label for="sendImmediately" class="ml-3">
+                                    <span class="block text-sm font-medium text-gray-900">Send Immediately</span>
+                                    <span class="block text-sm text-gray-600">Send campaign as soon as it's created</span>
+                                </label>
+                            </div>
+                            
+                            <!-- Schedule for Later -->
+                            <div class="flex items-center">
+                                <input type="radio" 
+                                       id="scheduleLater" 
+                                       name="send_immediately" 
+                                       value="false"
+                                       class="w-5 h-5 text-amber-600 focus:ring-amber-500 border-amber-300"
+                                       onclick="toggleScheduling(true)">
+                                <label for="scheduleLater" class="ml-3">
+                                    <span class="block text-sm font-medium text-gray-900">Schedule for Later</span>
+                                    <span class="block text-sm text-gray-600">Choose date and time to send</span>
+                                </label>
+                            </div>
+                            
+                            <!-- Schedule Date/Time -->
+                            <div id="scheduleFields" class="hidden pl-8 border-l-2 border-amber-200">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Date
+                                        </label>
+                                        <input type="date" 
+                                               name="scheduled_date"
+                                               id="scheduledDate"
+                                               min="{{ today|date:'Y-m-d' }}"
+                                               class="w-full px-4 py-2 border-2 border-amber-300 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Time
+                                        </label>
+                                        <input type="time" 
+                                               name="scheduled_time"
+                                               id="scheduledTime"
+                                               class="w-full px-4 py-2 border-2 border-amber-300 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Campaign will be sent at the specified date and time
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <label class="text-sm font-medium text-gray-700">
+                                <i class="fas fa-eye text-blue-600 mr-2"></i>
+                                Message Preview
+                            </label>
+                            <button type="button" 
+                                    onclick="updatePreview()"
+                                    class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
+                                <i class="fas fa-sync-alt mr-2"></i> Refresh Preview
+                            </button>
+                        </div>
+                        
+                        <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-6">
+                            <div id="messagePreview" class="prose max-w-none">
+                                <div class="bg-white p-4 rounded-lg shadow-sm">
+                                    <p class="text-gray-600">Your message will appear here...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="mt-8 pt-6 border-t border-amber-200">
+                    <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+                        <a href="{% url 'marketing:campaign_list' %}" 
+                           class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition duration-200 font-medium text-center">
+                            Cancel
+                        </a>
+                        <button type="submit" 
+                                class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition duration-200 font-medium flex items-center justify-center"
+                                id="submitBtn">
+                            <i class="fas fa-paper-plane mr-2"></i> Create Campaign
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Tips -->
+    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6">
+        <h4 class="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+            <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
+            Campaign Best Practices
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-white rounded-lg border border-blue-200">
+                <h5 class="font-medium text-gray-900 mb-2">Personalization</h5>
+                <p class="text-sm text-gray-600">Use variables like {user_name} to personalize messages and increase engagement.</p>
+            </div>
+            <div class="p-4 bg-white rounded-lg border border-blue-200">
+                <h5 class="font-medium text-gray-900 mb-2">Timing</h5>
+                <p class="text-sm text-gray-600">Schedule campaigns for optimal times (e.g., weekdays 10 AM - 2 PM).</p>
+            </div>
+            <div class="p-4 bg-white rounded-lg border border-blue-200">
+                <h5 class="font-medium text-gray-900 mb-2">Clear Call-to-Action</h5>
+                <p class="text-sm text-gray-600">Include clear instructions on what users should do next.</p>
+            </div>
+            <div class="p-4 bg-white rounded-lg border border-blue-200">
+                <h5 class="font-medium text-gray-900 mb-2">Audience Targeting</h5>
+                <p class="text-sm text-gray-600">Target specific user groups for higher relevance and conversion rates.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* File upload styling */
+    input[type="file"] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+    }
+    
+    .preview-message {
+        white-space: pre-wrap;
+        font-family: 'SF Mono', Monaco, 'Cascadia Mono', monospace;
+        line-height: 1.5;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Character count
+    const messageContent = document.getElementById('messageContent');
+    const charCount = document.getElementById('charCount');
+    
+    messageContent.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+        if (this.value.length > 2000) {
+            charCount.classList.add('text-red-600');
+        } else {
+            charCount.classList.remove('text-red-600');
+        }
+    });
+    
+    // Calculate audience count
+    updateAudienceCount();
+    
+    // File upload previews
+    setupFilePreview('imageInput', 'imagePreview', 'imageFilename');
+    setupFilePreview('attachmentInput', 'attachmentPreview', 'attachmentFilename');
+    
+    // Initial preview
+    updatePreview();
+});
+
+function setupFilePreview(inputId, previewId, filenameId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    const filename = document.getElementById(filenameId);
+    
+    input.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const fileName = this.files[0].name;
+            filename.textContent = fileName;
+            preview.classList.remove('hidden');
+        }
+    });
+}
+
+function clearFile(inputId) {
+    const input = document.getElementById(inputId);
+    const inputName = inputId.replace('Input', '');
+    const preview = document.getElementById(inputName + 'Preview');
+    
+    input.value = '';
+    preview.classList.add('hidden');
+}
+
+function insertVariable(variable) {
+    const textarea = document.getElementById('messageContent');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    
+    textarea.value = text.substring(0, start) + variable + text.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + variable.length;
+    
+    // Update character count
+    const charCount = document.getElementById('charCount');
+    charCount.textContent = textarea.value.length;
+    
+    // Update preview
+    updatePreview();
+}
+
+function toggleScheduling(show) {
+    const scheduleFields = document.getElementById('scheduleFields');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (show) {
+        scheduleFields.classList.remove('hidden');
+        submitBtn.innerHTML = '<i class="fas fa-clock mr-2"></i> Schedule Campaign';
+        
+        // Set default date to tomorrow
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('scheduledDate').value = tomorrow.toISOString().split('T')[0];
+        
+        // Set default time to 10:00 AM
+        document.getElementById('scheduledTime').value = '10:00';
+    } else {
+        scheduleFields.classList.add('hidden');
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Create Campaign';
+    }
+}
+
+function updateAudienceCount() {
+    const audienceType = document.querySelector('select[name="audience_type"]').value;
+    const audienceCount = document.getElementById('audienceCount');
+    
+    fetch(`/marketing/api/audience-count/?type=${audienceType}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.count !== undefined) {
+                audienceCount.innerHTML = `
+                    <i class="fas fa-users text-green-600 mr-2"></i>
+                    ${data.count} users in this audience
+                `;
+            } else {
+                audienceCount.innerHTML = `
+                    <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                    Could not calculate audience size
+                `;
+            }
+        })
+        .catch(error => {
+            audienceCount.innerHTML = `
+                <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                Error calculating audience
+            `;
+        });
+}
+
+function updatePreview() {
+    const content = document.getElementById('messageContent').value;
+    const preview = document.getElementById('messagePreview');
+    
+    // Format the preview
+    let formattedContent = content
+        .replace(/{user_name}/g, '<span class="bg-blue-100 text-blue-800 px-1 rounded">John Doe</span>')
+        .replace(/{amount}/g, '<span class="bg-green-100 text-green-800 px-1 rounded">$100.00</span>')
+        .replace(/{transaction_id}/g, '<span class="bg-amber-100 text-amber-800 px-1 rounded">TX123456</span>')
+        .replace(/{date}/g, '<span class="bg-purple-100 text-purple-800 px-1 rounded">' + new Date().toLocaleDateString() + '</span>')
+        .replace(/\n/g, '<br>');
+    
+    preview.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div class="preview-message text-gray-800">${formattedContent}</div>
+            <div class="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
+                <i class="fas fa-info-circle mr-1"></i>
+                This is a preview. Variables will be replaced with actual values when sent.
+            </div>
+        </div>
+    `;
+}
+
+// Update audience count when selection changes
+document.querySelector('select[name="audience_type"]').addEventListener('change', updateAudienceCount);
+
+// Form validation
+document.getElementById('campaignForm').addEventListener('submit', function(e) {
+    const title = document.querySelector('input[name="title"]').value.trim();
+    const content = document.getElementById('messageContent').value.trim();
+    
+    if (!title) {
+        e.preventDefault();
+        showToast('Please enter a campaign title', 'error');
+        document.querySelector('input[name="title"]').focus();
+        return;
+    }
+    
+    if (!content) {
+        e.preventDefault();
+        showToast('Please enter message content', 'error');
+        document.getElementById('messageContent').focus();
+        return;
+    }
+    
+    if (content.length > 2000) {
+        e.preventDefault();
+        showToast('Message content cannot exceed 2000 characters', 'error');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating...';
+});
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    const colors = {
+        'success': 'bg-gradient-to-r from-green-500 to-green-600',
+        'error': 'bg-gradient-to-r from-red-500 to-red-600',
+        'warning': 'bg-gradient-to-r from-yellow-500 to-yellow-600',
+        'info': 'bg-gradient-to-r from-blue-500 to-blue-600'
+    };
+    
+    toast.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-xl shadow-lg z-50`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'info-circle'} mr-3"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

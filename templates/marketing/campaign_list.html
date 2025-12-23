@@ -1,0 +1,253 @@
+<!-- templates/marketing/campaign_list.html -->
+{% extends 'base.html' %}
+
+{% block title %}Marketing Campaigns - Supreme AI{% endblock %}
+
+{% block page_title %}Marketing Campaigns{% endblock %}
+{% block page_subtitle %}Manage and track all marketing campaigns{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Action Bar -->
+    <div class="bg-white rounded-xl border border-amber-200 p-4 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+            <!-- Search -->
+            <div class="flex-1 max-w-md">
+                <form method="get" class="flex space-x-2">
+                    <div class="relative flex-1">
+                        <input type="text" 
+                               name="search" 
+                               placeholder="Search campaigns..." 
+                               value="{{ search_query }}"
+                               class="w-full pl-10 pr-4 py-2 border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                        <div class="absolute left-3 top-2.5">
+                            <i class="fas fa-search text-amber-400"></i>
+                        </div>
+                    </div>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition duration-200 font-medium">
+                        Search
+                    </button>
+                    {% if search_query %}
+                    <a href="{% url 'marketing:campaign_list' %}" 
+                       class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-200">
+                        Clear
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+            
+            <!-- Filters and Actions -->
+            <div class="flex flex-wrap items-center space-x-3">
+                <!-- Status Filter -->
+                <select name="status" 
+                        onchange="this.form.submit()" 
+                        class="border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Status</option>
+                    <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                    <option value="sent" {% if status_filter == 'sent' %}selected{% endif %}>Sent</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                </select>
+                
+                <!-- Type Filter -->
+                <select name="type" 
+                        onchange="this.form.submit()" 
+                        class="border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                    <option value="all" {% if type_filter == 'all' %}selected{% endif %}>All Types</option>
+                    <option value="transaction_success" {% if type_filter == 'transaction_success' %}selected{% endif %}>Transaction Success</option>
+                    <option value="transaction_failed" {% if type_filter == 'transaction_failed' %}selected{% endif %}>Transaction Failed</option>
+                    <option value="marketing" {% if type_filter == 'marketing' %}selected{% endif %}>Marketing</option>
+                    <option value="promotional" {% if type_filter == 'promotional' %}selected{% endif %}>Promotional</option>
+                    <option value="educational" {% if type_filter == 'educational' %}selected{% endif %}>Educational</option>
+                    <option value="system" {% if type_filter == 'system' %}selected{% endif %}>System</option>
+                    <option value="welcome" {% if type_filter == 'welcome' %}selected{% endif %}>Welcome</option>
+                </select>
+                
+                <!-- New Campaign Button -->
+                <a href="{% url 'marketing:campaign_create' %}" 
+                   class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition duration-200 font-medium flex items-center">
+                    <i class="fas fa-plus mr-2"></i> New Campaign
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaigns Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for campaign in campaigns %}
+        <div class="bg-white rounded-xl border border-amber-200 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+            <!-- Campaign Header -->
+            <div class="p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-gray-900 text-lg">{{ campaign.title }}</h3>
+                        <div class="flex items-center mt-2 space-x-2">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium 
+                                {% if campaign.status == 'sent' %}bg-green-100 text-green-800
+                                {% elif campaign.status == 'scheduled' %}bg-blue-100 text-blue-800
+                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {{ campaign.get_message_type_display }}
+                            </span>
+                            {% if campaign.is_active %}
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Active
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Campaign Image -->
+                    {% if campaign.image %}
+                    <div class="ml-4">
+                        <div class="w-16 h-16 rounded-lg overflow-hidden">
+                            <img src="{{ campaign.image.url }}" alt="{{ campaign.title }}" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Campaign Content Preview -->
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 line-clamp-2">{{ campaign.content|truncatechars:100 }}</p>
+                </div>
+                
+                <!-- Campaign Info -->
+                <div class="space-y-2 text-sm text-gray-600">
+                    <div class="flex items-center">
+                        <i class="fas fa-users w-5 mr-2 text-amber-500"></i>
+                        <span>Audience: {{ campaign.get_audience_type_display }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="far fa-calendar w-5 mr-2 text-blue-500"></i>
+                        <span>Created: {{ campaign.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    {% if campaign.scheduled_for %}
+                    <div class="flex items-center">
+                        <i class="fas fa-clock w-5 mr-2 text-purple-500"></i>
+                        <span>Scheduled: {{ campaign.scheduled_for|date:"M d, Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Campaign Actions -->
+            <div class="px-6 py-4 border-t border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        {% if campaign.is_sent %}
+                        <div class="text-sm text-green-600">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            Sent {{ campaign.sent_at|timesince }} ago
+                        </div>
+                        {% elif campaign.scheduled_for %}
+                        <div class="text-sm text-blue-600">
+                            <i class="fas fa-clock mr-1"></i>
+                            Scheduled
+                        </div>
+                        {% else %}
+                        <div class="text-sm text-yellow-600">
+                            <i class="fas fa-edit mr-1"></i>
+                            Draft
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <a href="{% url 'marketing:campaign_detail' campaign.pk %}" 
+                           class="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                           title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        
+                        {% if not campaign.is_sent %}
+                        <a href="{% url 'marketing:campaign_edit' campaign.pk %}" 
+                           class="text-amber-600 hover:text-amber-800 p-2 hover:bg-amber-50 rounded-lg transition-colors"
+                           title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        
+                        <form method="post" 
+                              action="{% url 'marketing:campaign_send' campaign.pk %}"
+                              class="inline"
+                              onsubmit="return confirm('Send this campaign to {{ campaign.get_audience_count }} users?')">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    class="text-green-600 hover:text-green-800 p-2 hover:bg-green-50 rounded-lg transition-colors"
+                                    title="Send Campaign">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full">
+            <div class="bg-white rounded-xl border border-amber-200 p-12 text-center">
+                <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-bullhorn text-amber-400 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">No campaigns found</h3>
+                <p class="text-gray-600 mb-6">Create your first marketing campaign to get started</p>
+                <a href="{% url 'marketing:campaign_create' %}" 
+                   class="inline-block px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition duration-200 font-medium">
+                    <i class="fas fa-plus mr-2"></i> Create Campaign
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if campaigns.has_other_pages %}
+    <div class="bg-white rounded-xl border border-amber-200 p-6">
+        <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+            <div class="text-sm text-gray-700">
+                Showing <span class="font-medium">{{ campaigns.start_index }}</span> to 
+                <span class="font-medium">{{ campaigns.end_index }}</span> of 
+                <span class="font-medium">{{ campaigns.paginator.count }}</span> campaigns
+            </div>
+            <div class="flex space-x-2">
+                {% if campaigns.has_previous %}
+                <a href="?page={{ campaigns.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'all' %}&type={{ type_filter }}{% endif %}"
+                   class="px-3 py-2 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                {% endif %}
+                
+                {% for num in campaigns.paginator.page_range %}
+                    {% if campaigns.number == num %}
+                    <span class="px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-white font-medium">
+                        {{ num }}
+                    </span>
+                    {% elif num > campaigns.number|add:'-3' and num < campaigns.number|add:'3' %}
+                    <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'all' %}&type={{ type_filter }}{% endif %}"
+                       class="px-3 py-2 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if campaigns.has_next %}
+                <a href="?page={{ campaigns.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if type_filter != 'all' %}&type={{ type_filter }}{% endif %}"
+                   class="px-3 py-2 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}

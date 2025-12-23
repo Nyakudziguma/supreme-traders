@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from .models import EcoCashTransaction, TransactionReceipt, TransactionCharge
+from .models import EcoCashTransaction, TransactionReceipt, TransactionCharge, BillingCycle
 
 @admin.register(TransactionCharge)
 class TransactionChargeAdmin(admin.ModelAdmin):
@@ -62,3 +62,26 @@ class TransactionReceiptAdmin(admin.ModelAdmin):
     list_filter = ['verified', 'uploaded_at']
     search_fields = ['transaction__reference_number', 'receipt_number']
     readonly_fields = ['uploaded_at']
+
+
+@admin.register(BillingCycle)
+class BillingCycleAdmin(admin.ModelAdmin):
+    list_display = (
+        "client_name",
+        "start_date",
+        "end_date",
+        "transactions_count",
+        "amount_due",
+        "paid",
+    )
+    list_filter = ("paid", "start_date", "end_date")
+    search_fields = ("client_name",)
+    actions = ["mark_as_paid"]
+
+    def mark_as_paid(self, request, queryset):
+        """Custom action to mark selected cycles as paid and start new ones."""
+        for billing in queryset:
+            if not billing.paid:
+                billing.close_cycle()
+        self.message_user(request, f"{queryset.count()} billing cycles marked as paid and new cycles started.")
+    mark_as_paid.short_description = "Mark selected billing cycles as paid and start new cycles"

@@ -22,7 +22,7 @@ from rest_framework.permissions import AllowAny
 from accounts.models import User
 from pathlib import Path
 from .handlers import MessageHandler
-from .models import InitiateOrders, WhatsAppSession, EcocashPop
+from .models import InitiateOrders, WhatsAppSession, EcocashPop, InitiateSellOrders
 import hashlib
 import hmac
 import base64
@@ -31,6 +31,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from signals.models import Subscribers
 
 class WebhookView(APIView): 
     permission_classes = [AllowAny]
@@ -156,6 +157,8 @@ def create_deposit_order(request):
         
         trader = User.objects.get(phone_number=decrypted_data.get("flow_token"))
 
+        InitiateOrders.objects.filter(trader=trader).delete()
+
         try:
             InitiateOrders.objects.create(
                 trader=trader,
@@ -169,6 +172,113 @@ def create_deposit_order(request):
         chat = WhatsAppSession.objects.get(user__phone_number=decrypted_data.get("flow_token"))
         chat.current_step = 'waiting_for_ecocash_pop'
         chat.previous_step = 'order_creation'
+        chat.save()
+        
+        response = {
+                "version": "3.0",
+                "screen": "SUCCESS",
+                "data": {
+                    "extension_message_response": {
+                        "params": {
+                            "flow_token": decrypted_data.get("flow_token"),
+                            "flow_state": "finish_flow_application",
+                           
+                        }
+                    }
+                }
+            }
+
+        return HttpResponse(encrypt_response(response, aes_key, iv), content_type='text/plain')
+
+    except ValueError as ve:
+        print(f'Oops, ValueError: {ve}')
+        return JsonResponse({'error': str(ve)}, status=400)
+    except json.JSONDecodeError as jde:
+        print(f'Oops, JSONDecodeError: {jde}')
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f'Oops, Exception: {e}')
+        return JsonResponse({'error': 'An error occurred while processing the request.'}, status=500)
+
+import re
+
+def normalize_account_number(account_number: str) -> str:
+    """
+    Ensures account number is in CR123456 format
+    """
+    if not account_number:
+        raise ValueError("Account number is required")
+
+    # Remove spaces and make uppercase
+    acc = str(account_number).replace(" ", "").upper()
+
+    # Extract digits
+    digits = re.sub(r"\D", "", acc)
+
+    if not digits:
+        raise ValueError("Invalid account number format")
+
+    return f"CR{digits}"
+
+
+@csrf_exempt
+def create_withdrawal_order(request):
+    try:
+        if request.content_type == 'application/json':
+            body = json.loads(request.body)
+        elif request.content_type == 'application/x-www-form-urlencoded':
+            body = request.POST.dict()
+        else:
+            return JsonResponse({'error': 'Unsupported content type'}, status=400)
+
+        
+
+        required_fields = ['encrypted_flow_data', 'encrypted_aes_key', 'initial_vector']
+        for field in required_fields:
+            if field not in body:
+                raise ValueError(f"Missing required field: {field}")
+
+        encrypted_flow_data_b64 = body['encrypted_flow_data']
+        encrypted_aes_key_b64 = body['encrypted_aes_key']
+        initial_vector_b64 = body['initial_vector']
+        
+
+        decrypted_data, aes_key, iv = decrypt_request(
+            encrypted_flow_data_b64, encrypted_aes_key_b64, initial_vector_b64)
+        print(decrypted_data)
+        
+        if decrypted_data.get("version") == "3.0" and decrypted_data.get("action") == "ping":
+            response = {
+               "version": "3.0",
+                "data": {
+                    "status": "active"
+                }
+            }
+            return HttpResponse(encrypt_response(response, aes_key, iv), content_type='text/plain')
+
+        
+        trader = User.objects.get(phone_number=decrypted_data.get("flow_token"))
+        account_number=decrypted_data['data'].get('account_number')
+
+        InitiateSellOrders.objects.filter(account_number=account_number).delete()
+
+        normalized_account = normalize_account_number(account_number)
+
+        try:
+            InitiateSellOrders.objects.create(
+                trader=trader,
+                amount=decrypted_data['data'].get('amount'),
+                account_number=normalized_account,
+                ecocash_number=decrypted_data['data'].get('ecocash_number'),
+                ecocash_name=decrypted_data['data'].get('ecocash_name'),
+                email=decrypted_data['data'].get('email')
+            )
+        except Exception as e:
+            print(e)
+
+        chat = WhatsAppSession.objects.get(user__phone_number=decrypted_data.get("flow_token"))
+        chat.current_step = 'start_withdrawal_order'
+        chat.previous_step = 'menu'
         chat.save()
         
         response = {
@@ -290,6 +400,187 @@ def add_ecocash_pop(request):
     except Exception as e:
         print(f'Oops, Exception: {e}')
         return JsonResponse({'error': 'An error occurred while processing the request.'}, status=500)
+
+@csrf_exempt
+def add_ecocash_message_pop(request):
+    try:
+        if request.content_type == 'application/json':
+            body = json.loads(request.body)
+        elif request.content_type == 'application/x-www-form-urlencoded':
+            body = request.POST.dict()
+        else:
+            return JsonResponse({'error': 'Unsupported content type'}, status=400)
+
+        
+
+        required_fields = ['encrypted_flow_data', 'encrypted_aes_key', 'initial_vector']
+        for field in required_fields:
+            if field not in body:
+                raise ValueError(f"Missing required field: {field}")
+
+        encrypted_flow_data_b64 = body['encrypted_flow_data']
+        encrypted_aes_key_b64 = body['encrypted_aes_key']
+        initial_vector_b64 = body['initial_vector']
+        
+
+        decrypted_data, aes_key, iv = decrypt_request(
+            encrypted_flow_data_b64, encrypted_aes_key_b64, initial_vector_b64)
+        
+        if decrypted_data.get("version") == "3.0" and decrypted_data.get("action") == "ping":
+            response = {
+               "version": "3.0",
+                "data": {
+                    "status": "active"
+                }
+            }
+            return HttpResponse(encrypt_response(response, aes_key, iv), content_type='text/plain')
+
+        
+        trader = User.objects.get(phone_number=decrypted_data.get("flow_token"))
+        print("Decrypted data for Ecocash POP:", decrypted_data)
+    
+        order = InitiateOrders.objects.get(trader=trader)
+        if order:
+            old_pop = EcocashPop.objects.filter(order=order).first()
+            if old_pop:
+                old_pop.delete()
+            try:
+                EcocashPop.objects.create(
+                    order=order,
+                    ecocash_message=decrypted_data['data'].get('ecocash_message'),
+                    has_image=False
+                )
+            except Exception as e:
+                print("Error on saving EcocashPop: ", e)
+        else:
+            print("No order found for the trader." )
+            
+
+        chat = WhatsAppSession.objects.get(user__phone_number=decrypted_data.get("flow_token"))
+        chat.current_step = 'finish_order_creation'
+        chat.previous_step = 'order_creation'
+        chat.save()
+        
+        response = {
+                "version": "3.0",
+                "screen": "SUCCESS",
+                "data": {
+                    "extension_message_response": {
+                        "params": {
+                            "flow_token": decrypted_data.get("flow_token"),
+                            "flow_state": "finish_flow_application",
+                           
+                        }
+                    }
+                }
+            }
+
+        return HttpResponse(encrypt_response(response, aes_key, iv), content_type='text/plain')
+
+    except ValueError as ve:
+        print(f'Oops, ValueError: {ve}')
+        return JsonResponse({'error': str(ve)}, status=400)
+    except json.JSONDecodeError as jde:
+        print(f'Oops, JSONDecodeError: {jde}')
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f'Oops, Exception: {e}')
+        return JsonResponse({'error': 'An error occurred while processing the request.'}, status=500)
+
+@csrf_exempt
+def add_signals_pop(request):
+    try:
+        if request.content_type == 'application/json':
+            body = json.loads(request.body)
+        elif request.content_type == 'application/x-www-form-urlencoded':
+            body = request.POST.dict()
+        else:
+            return JsonResponse({'error': 'Unsupported content type'}, status=400)
+
+        
+
+        required_fields = ['encrypted_flow_data', 'encrypted_aes_key', 'initial_vector']
+        for field in required_fields:
+            if field not in body:
+                raise ValueError(f"Missing required field: {field}")
+
+        encrypted_flow_data_b64 = body['encrypted_flow_data']
+        encrypted_aes_key_b64 = body['encrypted_aes_key']
+        initial_vector_b64 = body['initial_vector']
+        
+
+        decrypted_data, aes_key, iv = decrypt_request(
+            encrypted_flow_data_b64, encrypted_aes_key_b64, initial_vector_b64)
+        
+        if decrypted_data.get("version") == "3.0" and decrypted_data.get("action") == "ping":
+            response = {
+               "version": "3.0",
+                "data": {
+                    "status": "active"
+                }
+            }
+            return HttpResponse(encrypt_response(response, aes_key, iv), content_type='text/plain')
+
+        
+        trader = User.objects.get(phone_number=decrypted_data.get("flow_token"))
+        print("Decrypted data for Ecocash POP:", decrypted_data)
+           
+        ecocash_pop_encryption_key = decrypted_data['data'].get('ecocash_pop', [])[0].get('encryption_metadata', {}).get('encryption_key')
+        ecocash_pop_hmac_key = decrypted_data['data'].get('ecocash_pop', [])[0].get('encryption_metadata', {}).get('hmac_key')
+        ecocash_pop_iv = decrypted_data['data'].get('ecocash_pop', [])[0].get('encryption_metadata', {}).get('iv')
+        ecocash_pop_plaintext = decrypted_data['data'].get('ecocash_pop', [])[0].get('encryption_metadata', {}).get('plaintext_hash')
+        ecocash_pop_encrypted_hash = decrypted_data['data'].get('ecocash_pop', [])[0].get('encryption_metadata', {}).get('encrypted_hash')
+        ecocash_pop_cdn_url = decrypted_data['data'].get('ecocash_pop', [])[0].get('cdn_url')
+
+
+        base_filename = f"{decrypted_data['data'].get('flow_token')}"
+        ecocash_pop_filename = f"{base_filename}_ecocash_pop.jpg"
+        ecocash_pop = decrypt_whatsapp_media(ecocash_pop_cdn_url, ecocash_pop_encryption_key, ecocash_pop_hmac_key, ecocash_pop_iv, ecocash_pop_plaintext, ecocash_pop_encrypted_hash, ecocash_pop_filename)
+        print("Decrypted Ecocash POP saved at:", ecocash_pop)
+        sub = Subscribers.objects.get(trader=trader)
+        
+        if sub:
+            try:
+                sub.ecocash_number = decrypted_data['data'].get('ecocash_number')
+                sub.pop_image = ecocash_pop
+                sub.save()
+            except Exception as e:
+                print(e)
+        else:
+            print("No subscription found for the trader." )
+            
+
+        chat = WhatsAppSession.objects.get(user__phone_number=decrypted_data.get("flow_token"))
+        chat.current_step = 'finish_signal_subscription'
+        chat.previous_step = 'signal_subscription'
+        chat.save()
+        
+        response = {
+                "version": "3.0",
+                "screen": "SUCCESS",
+                "data": {
+                    "extension_message_response": {
+                        "params": {
+                            "flow_token": decrypted_data.get("flow_token"),
+                            "flow_state": "finish_flow_application",
+                           
+                        }
+                    }
+                }
+            }
+
+        return HttpResponse(encrypt_response(response, aes_key, iv), content_type='text/plain')
+
+    except ValueError as ve:
+        print(f'Oops, ValueError: {ve}')
+        return JsonResponse({'error': str(ve)}, status=400)
+    except json.JSONDecodeError as jde:
+        print(f'Oops, JSONDecodeError: {jde}')
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f'Oops, Exception: {e}')
+        return JsonResponse({'error': 'An error occurred while processing the request.'}, status=500)
+
 
 
 def decrypt_request(encrypted_flow_data_b64, encrypted_aes_key_b64, initial_vector_b64):

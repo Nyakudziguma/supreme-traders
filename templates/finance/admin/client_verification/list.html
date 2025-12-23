@@ -1,0 +1,696 @@
+<!-- templates/finance/admin/client_verification/list.html -->
+{% extends 'base.html' %}
+
+{% block title %}Client Verification - Supreme AI{% endblock %}
+
+{% block page_title %}Client Verification Management{% endblock %}
+{% block page_subtitle %}Manage client verification for restricted transactions{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-amber-700 font-medium">Total Clients</p>
+                    <p class="text-3xl font-bold text-amber-900 mt-2">{{ total_count }}</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                    <i class="fas fa-users text-amber-600 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 text-xs text-amber-600">
+                <i class="fas fa-info-circle mr-1"></i>
+                All registered clients
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-green-700 font-medium">Verified</p>
+                    <p class="text-3xl font-bold text-green-900 mt-2">{{ verified_count }}</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 text-xs text-green-600">
+                <i class="fas fa-check mr-1"></i>
+                Can perform restricted transactions
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-yellow-700 font-medium">Unverified</p>
+                    <p class="text-3xl font-bold text-yellow-900 mt-2">{{ unverified_count }}</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-100 to-yellow-200 flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 text-xs text-yellow-600">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Need verification for restricted transactions
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="bg-white rounded-xl border border-amber-200 p-4 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+            <!-- Search -->
+            <div class="flex-1 max-w-md">
+                <form method="get" class="flex space-x-2">
+                    <div class="relative flex-1">
+                        <input type="text" 
+                               name="search" 
+                               placeholder="Search by name or EcoCash number..." 
+                               value="{{ search_query }}"
+                               class="w-full pl-10 pr-4 py-2 border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                        <div class="absolute left-3 top-2.5">
+                            <i class="fas fa-search text-amber-400"></i>
+                        </div>
+                    </div>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition duration-200 font-medium">
+                        Search
+                    </button>
+                    {% if search_query %}
+                    <a href="{% url 'finance:client_verification_list' %}" 
+                       class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-200">
+                        Clear
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+            
+            <!-- Filters and Actions -->
+            <div class="flex flex-wrap items-center space-x-3">
+                <!-- Status Filter -->
+                <select name="status" 
+                        onchange="this.form.submit()" 
+                        class="border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Status</option>
+                    <option value="verified" {% if status_filter == 'verified' %}selected{% endif %}>Verified Only</option>
+                    <option value="unverified" {% if status_filter == 'unverified' %}selected{% endif %}>Unverified Only</option>
+                </select>
+                
+                <!-- Verified By Filter -->
+                <select name="verified_by" 
+                        onchange="this.form.submit()" 
+                        class="border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                    <option value="">All Verifiers</option>
+                    {% for admin in admins %}
+                    <option value="{{ admin.username }}" {% if verified_by_filter == admin.username %}selected{% endif %}>
+                        {{ admin.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+                
+                <!-- New Client Button -->
+                <button onclick="openNewClientModal()"
+                        class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition duration-200 font-medium flex items-center">
+                    <i class="fas fa-plus mr-2"></i> New Client
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clients Table -->
+    <div class="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm">
+        <form id="bulkForm" method="post" action="{% url 'finance:client_verification_bulk_action' %}">
+            {% csrf_token %}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gradient-to-r from-amber-50 to-amber-100">
+                        <tr>
+                            <th class="px-6 py-4 text-left">
+                                <input type="checkbox" 
+                                       id="selectAll" 
+                                       class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                                Client Info
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                                Verification
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                                Documents
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                                Created
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-amber-100">
+                        {% for client in clients %}
+                        <tr class="hover:bg-amber-50 transition-colors">
+                            <td class="px-6 py-4">
+                                <input type="checkbox" 
+                                       name="client_ids" 
+                                       value="{{ client.id }}"
+                                       class="client-checkbox rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br 
+                                        {% if client.verified %}from-green-100 to-green-200{% else %}from-yellow-100 to-yellow-200{% endif %}
+                                        flex items-center justify-center mr-3">
+                                        <i class="fas fa-user {% if client.verified %}text-green-600{% else %}text-yellow-600{% endif %}"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">{{ client.name }}</p>
+                                        <p class="text-sm text-gray-500 mt-1">
+                                            <i class="fas fa-phone mr-1 text-amber-500"></i>
+                                            {{ client.ecocash_number }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="space-y-2">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                                        {% if client.verified %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                        {% if client.verified %}
+                                        <i class="fas fa-check-circle mr-1"></i> Verified
+                                        {% else %}
+                                        <i class="fas fa-clock mr-1"></i> Unverified
+                                        {% endif %}
+                                    </span>
+                                    {% if client.verified %}
+                                    <div class="text-xs text-gray-600">
+                                        <div>By: {{ client.verified_by.username|default:"System" }}</div>
+                                        <div>On: {{ client.verified_at|date:"M d, Y H:i" }}</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex space-x-2">
+                                    {% if client.national_id_image %}
+                                    <a href="{{ client.national_id_image.url }}" 
+                                       target="_blank"
+                                       class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs hover:bg-blue-200 transition-colors">
+                                        <i class="fas fa-id-card mr-1"></i> ID
+                                    </a>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-500 rounded-lg text-xs">
+                                        <i class="fas fa-id-card mr-1"></i> No ID
+                                    </span>
+                                    {% endif %}
+                                    
+                                    {% if client.selfie_with_id %}
+                                    <a href="{{ client.selfie_with_id.url }}" 
+                                       target="_blank"
+                                       class="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs hover:bg-purple-200 transition-colors">
+                                        <i class="fas fa-camera mr-1"></i> Selfie
+                                    </a>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-500 rounded-lg text-xs">
+                                        <i class="fas fa-camera mr-1"></i> No Selfie
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ client.created_at|date:"M d, Y" }}</div>
+                                <div class="text-xs text-gray-500">{{ client.created_at|time:"H:i" }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <div class="flex items-center space-x-2">
+                                    <a href="{% url 'finance:client_verification_detail' client.pk %}" 
+                                       class="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                       title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                    {% if client.verified %}
+                                    <form method="post" 
+                                          action="{% url 'finance:client_verification_unverify' client.pk %}"
+                                          class="inline"
+                                          onsubmit="return confirm('Unverify {{ client.name }}?')">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                class="text-yellow-600 hover:text-yellow-900 p-2 hover:bg-yellow-50 rounded-lg transition-colors"
+                                                title="Unverify">
+                                            <i class="fas fa-times-circle"></i>
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" 
+                                          action="{% url 'finance:client_verification_verify' client.pk %}"
+                                          class="inline"
+                                          onsubmit="return confirm('Verify {{ client.name }}?')">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                class="text-green-600 hover:text-green-900 p-2 hover:bg-green-50 rounded-lg transition-colors"
+                                                title="Verify">
+                                            <i class="fas fa-check-circle"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    
+                                    <button onclick="openEditClientModal('{{ client.id }}', '{{ client.name }}', '{{ client.ecocash_number }}')"
+                                            class="text-amber-600 hover:text-amber-900 p-2 hover:bg-amber-50 rounded-lg transition-colors"
+                                            title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    
+                                    <form method="post" 
+                                          action="{% url 'finance:client_verification_delete' client.pk %}"
+                                          class="inline"
+                                          onsubmit="return confirm('Delete {{ client.name }}? This action cannot be undone.')">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                class="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center">
+                                <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-users text-amber-400 text-xl"></i>
+                                </div>
+                                <p class="text-gray-500 font-medium">No clients found</p>
+                                <p class="text-sm text-gray-400 mt-1">Click "New Client" to add a client for verification</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Bulk Actions -->
+            {% if clients %}
+            <div class="px-6 py-4 border-t border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-amber-700">
+                            Selected: <span id="selectedCount">0</span> client(s)
+                        </span>
+                        <select name="action" 
+                                id="bulkAction"
+                                class="border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                            <option value="">Bulk Actions</option>
+                            <option value="verify">Verify Selected</option>
+                            <option value="unverify">Unverify Selected</option>
+                            <option value="delete">Delete Selected</option>
+                        </select>
+                        <button type="submit" 
+                                id="applyBulkAction"
+                                class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled>
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </form>
+        
+        <!-- Pagination -->
+        {% if clients.has_other_pages %}
+        <div class="px-6 py-4 border-t border-amber-200 bg-white">
+            <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+                <div class="text-sm text-gray-700">
+                    Showing <span class="font-medium">{{ clients.start_index }}</span> to 
+                    <span class="font-medium">{{ clients.end_index }}</span> of 
+                    <span class="font-medium">{{ clients.paginator.count }}</span> clients
+                </div>
+                <div class="flex space-x-2">
+                    {% if clients.has_previous %}
+                    <a href="?page={{ clients.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}"
+                       class="px-3 py-2 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    {% endif %}
+                    
+                    {% for num in clients.paginator.page_range %}
+                        {% if clients.number == num %}
+                        <span class="px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-white font-medium">
+                            {{ num }}
+                        </span>
+                        {% elif num > clients.number|add:'-3' and num < clients.number|add:'3' %}
+                        <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}"
+                           class="px-3 py-2 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors">
+                            {{ num }}
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if clients.has_next %}
+                    <a href="?page={{ clients.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}"
+                       class="px-3 py-2 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Info Box -->
+    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                    <i class="fas fa-info-circle text-blue-600"></i>
+                </div>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-blue-900">About Client Verification</h3>
+                <div class="mt-2 text-blue-800 space-y-2">
+                    <p><i class="fas fa-check-circle text-green-500 mr-2"></i>
+                        <strong>Verified Clients</strong> can perform all transactions, including deposits with name mismatches
+                    </p>
+                    <p><i class="fas fa-times-circle text-yellow-500 mr-2"></i>
+                        <strong>Unverified Clients</strong> can only perform transactions where the Deriv account name matches the EcoCash name exactly
+                    </p>
+                    <p><i class="fas fa-shield-alt text-purple-500 mr-2"></i>
+                        Client verification helps prevent fraud and ensures secure transactions
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Client Modal -->
+<div id="newClientModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-900">
+                <i class="fas fa-user-plus text-amber-600 mr-2"></i>
+                Add New Client
+            </h3>
+            <button onclick="closeNewClientModal()" 
+                    class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        
+        <form id="newClientForm" method="post" action="{% url 'finance:client_verification_create' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user text-blue-500 mr-2"></i>
+                        Full Name *
+                    </label>
+                    <input type="text" 
+                           name="name" 
+                           required
+                           class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200"
+                           placeholder="John Doe">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-phone text-green-500 mr-2"></i>
+                        EcoCash Number *
+                    </label>
+                    <input type="text" 
+                           name="ecocash_number" 
+                           required
+                           class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200"
+                           placeholder="077XXXXXXX">
+                    <p class="text-xs text-gray-500 mt-1">We'll automatically normalize the number format</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-id-card text-purple-500 mr-2"></i>
+                        National ID Image (Optional)
+                    </label>
+                    <input type="file" 
+                           name="national_id_image"
+                           accept="image/*"
+                           class="w-full px-4 py-2 border-2 border-dashed border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-camera text-pink-500 mr-2"></i>
+                        Selfie with ID (Optional)
+                    </label>
+                    <input type="file" 
+                           name="selfie_with_id"
+                           accept="image/*"
+                           class="w-full px-4 py-2 border-2 border-dashed border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                </div>
+            </div>
+            
+            <div class="mt-8 flex justify-end space-x-3">
+                <button type="button" 
+                        onclick="closeNewClientModal()"
+                        class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-colors font-medium">
+                    <i class="fas fa-save mr-2"></i> Save Client
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Client Modal -->
+<div id="editClientModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold text-gray-900">
+                <i class="fas fa-edit text-amber-600 mr-2"></i>
+                Edit Client
+            </h3>
+            <button onclick="closeEditClientModal()" 
+                    class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        
+        <form id="editClientForm" method="post" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="client_id" id="editClientId">
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user text-blue-500 mr-2"></i>
+                        Full Name *
+                    </label>
+                    <input type="text" 
+                           name="name" 
+                           id="editClientName"
+                           required
+                           class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-phone text-green-500 mr-2"></i>
+                        EcoCash Number *
+                    </label>
+                    <input type="text" 
+                           name="ecocash_number" 
+                           id="editClientPhone"
+                           required
+                           class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            National ID Image
+                        </label>
+                        <input type="file" 
+                               name="national_id_image"
+                               accept="image/*"
+                               class="w-full px-4 py-2 border-2 border-dashed border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Selfie with ID
+                        </label>
+                        <input type="file" 
+                               name="selfie_with_id"
+                               accept="image/*"
+                               class="w-full px-4 py-2 border-2 border-dashed border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                    </div>
+                </div>
+                
+                <div class="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <p class="text-sm text-amber-700">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Leaving image fields empty will keep existing images
+                    </p>
+                </div>
+            </div>
+            
+            <div class="mt-8 flex justify-end space-x-3">
+                <button type="button" 
+                        onclick="closeEditClientModal()"
+                        class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition-colors font-medium">
+                    <i class="fas fa-save mr-2"></i> Update Client
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Modal animations */
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .modal-enter {
+        animation: modalFadeIn 0.3s ease-out;
+    }
+</style>
+
+<script>
+// Modal functions
+function openNewClientModal() {
+    document.getElementById('newClientModal').classList.remove('hidden');
+    document.getElementById('newClientModal').classList.add('modal-enter');
+    document.querySelector('#newClientForm input[name="name"]').focus();
+}
+
+function closeNewClientModal() {
+    document.getElementById('newClientModal').classList.add('hidden');
+    document.getElementById('newClientForm').reset();
+}
+
+function openEditClientModal(clientId, clientName, clientPhone) {
+    document.getElementById('editClientModal').classList.remove('hidden');
+    document.getElementById('editClientModal').classList.add('modal-enter');
+    
+    // Set form values
+    document.getElementById('editClientId').value = clientId;
+    document.getElementById('editClientName').value = clientName;
+    document.getElementById('editClientPhone').value = clientPhone;
+    
+    // Set form action
+    document.getElementById('editClientForm').action = `/finance/client-verification/${clientId}/update/`;
+}
+
+function closeEditClientModal() {
+    document.getElementById('editClientModal').classList.add('hidden');
+    document.getElementById('editClientForm').reset();
+}
+
+// Select all checkboxes
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.client-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+    updateSelectedCount();
+});
+
+// Update selected count
+function updateSelectedCount() {
+    const selected = document.querySelectorAll('.client-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = selected;
+    
+    // Enable/disable bulk action button
+    const bulkButton = document.getElementById('applyBulkAction');
+    const bulkAction = document.getElementById('bulkAction');
+    
+    if (selected > 0 && bulkAction.value) {
+        bulkButton.disabled = false;
+    } else {
+        bulkButton.disabled = true;
+    }
+}
+
+// Attach event listeners to checkboxes
+document.querySelectorAll('.client-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectedCount);
+});
+
+// Bulk action select change
+document.getElementById('bulkAction').addEventListener('change', function() {
+    const selected = document.querySelectorAll('.client-checkbox:checked').length;
+    const bulkButton = document.getElementById('applyBulkAction');
+    
+    if (selected > 0 && this.value) {
+        bulkButton.disabled = false;
+    } else {
+        bulkButton.disabled = true;
+    }
+});
+
+// Bulk form submission confirmation
+document.getElementById('bulkForm').addEventListener('submit', function(e) {
+    const action = document.getElementById('bulkAction').value;
+    const selected = document.querySelectorAll('.client-checkbox:checked').length;
+    
+    if (!action || selected === 0) {
+        e.preventDefault();
+        return;
+    }
+    
+    let message = '';
+    if (action === 'delete') {
+        message = `Are you sure you want to delete ${selected} client(s)? This action cannot be undone.`;
+    } else if (action === 'verify') {
+        message = `Are you sure you want to verify ${selected} client(s)?`;
+    } else if (action === 'unverify') {
+        message = `Are you sure you want to unverify ${selected} client(s)?`;
+    }
+    
+    if (message && !confirm(message)) {
+        e.preventDefault();
+    }
+});
+
+// Format phone number input
+document.querySelectorAll('input[name="ecocash_number"]').forEach(input => {
+    input.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 0) {
+            if (!value.startsWith('263') && value.length > 9) {
+                value = '263' + value.slice(-9);
+            }
+            e.target.value = value;
+        }
+    });
+});
+
+// Close modals on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeNewClientModal();
+        closeEditClientModal();
+    }
+});
+</script>
+{% endblock %}

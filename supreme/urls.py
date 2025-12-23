@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,6 +26,16 @@ urlpatterns = [
     path('finance/', include('finance.urls')),
     path('wa/', include('whatsapp.urls')),
     path('deriv/', include('deriv.urls')),
+    path('signals/', include('signals.urls')),
+    path('', views.dashboard, name='admin_dashboard'),
+    path('rasp-messages/', include('raspberrypi.urls')),
+    path('econet/', include('raspberrypi.frontend_urls')),
+     path('books/', include('books.urls')),
+    path('marketing/', include('marketing.urls')),
+    path('switches/', include('whatsapp.switch_urls')),
+
+
+
 ]
 
 if settings.DEBUG:

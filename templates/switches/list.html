@@ -1,0 +1,352 @@
+<!-- templates/switches/list.html -->
+{% extends 'base.html' %}
+
+{% block title %}Switch Management - Supreme AI{% endblock %}
+
+{% block page_title %}Switch Management{% endblock %}
+{% block page_subtitle %}Turn features on/off and manage messages{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-amber-700 font-medium">Total Switches</p>
+                    <p class="text-2xl font-bold text-amber-900">{{ total_count }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
+                    <i class="fas fa-toggle-on text-amber-600"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-green-700 font-medium">Active</p>
+                    <p class="text-2xl font-bold text-green-900">{{ active_count }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-700 font-medium">Inactive</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ inactive_count }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                    <i class="fas fa-times-circle text-gray-600"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="bg-white rounded-xl border border-amber-200 p-4 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+            <!-- New Switch Button -->
+            <a href="{% url 'switches:switch_create' %}" 
+               class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition duration-200 font-medium flex items-center justify-center md:justify-start">
+                <i class="fas fa-plus mr-2"></i> Add New Switch
+            </a>
+            
+            <!-- Bulk Actions -->
+            <form method="post" action="{% url 'switches:switch_bulk_toggle' %}" class="flex items-center space-x-3">
+                {% csrf_token %}
+                <span class="text-sm text-gray-600">Selected: <span id="selectedCount">0</span></span>
+                <select name="action" 
+                        id="bulkAction"
+                        class="border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                    <option value="">Bulk Actions</option>
+                    <option value="activate">Activate Selected</option>
+                    <option value="deactivate">Deactivate Selected</option>
+                    <option value="delete">Delete Selected</option>
+                </select>
+                <button type="submit" 
+                        id="applyBulkAction"
+                        class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled>
+                    Apply
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Switches Table -->
+    <div class="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm">
+        <form id="bulkForm">
+            <table class="w-full">
+                <thead class="bg-gradient-to-r from-amber-50 to-amber-100">
+                    <tr>
+                        <th class="px-6 py-4 text-left">
+                            <input type="checkbox" 
+                                   id="selectAll" 
+                                   class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                        </th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                            Feature
+                        </th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                            Status
+                        </th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                            Messages
+                        </th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                            Last Updated
+                        </th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-amber-100">
+                    {% for switch in switches %}
+                    <tr class="hover:bg-amber-50 transition-colors">
+                        <!-- Checkbox -->
+                        <td class="px-6 py-4">
+                            <input type="checkbox" 
+                                   name="switch_ids" 
+                                   value="{{ switch.id }}"
+                                   class="switch-checkbox rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                        </td>
+                        
+                        <!-- Feature -->
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 rounded-lg 
+                                    {% if switch.transaction_type == 'deposit' %}bg-gradient-to-br from-green-100 to-green-200
+                                    {% elif switch.transaction_type == 'withdrawal' %}bg-gradient-to-br from-blue-100 to-blue-200
+                                    {% elif switch.transaction_type == 'signals' %}bg-gradient-to-br from-purple-100 to-purple-200
+                                    {% elif switch.transaction_type == 'books' %}bg-gradient-to-br from-amber-100 to-amber-200
+                                    {% elif switch.transaction_type == 'training' %}bg-gradient-to-br from-red-100 to-red-200
+                                    {% else %}bg-gradient-to-br from-gray-100 to-gray-200{% endif %}
+                                    flex items-center justify-center mr-3">
+                                    {% if switch.transaction_type == 'deposit' %}
+                                    <i class="fas fa-money-bill-transfer text-green-600"></i>
+                                    {% elif switch.transaction_type == 'withdrawal' %}
+                                    <i class="fas fa-wallet text-blue-600"></i>
+                                    {% elif switch.transaction_type == 'signals' %}
+                                    <i class="fas fa-signal text-purple-600"></i>
+                                    {% elif switch.transaction_type == 'books' %}
+                                    <i class="fas fa-book text-amber-600"></i>
+                                    {% elif switch.transaction_type == 'training' %}
+                                    <i class="fas fa-graduation-cap text-red-600"></i>
+                                    {% else %}
+                                    <i class="fas fa-cog text-gray-600"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900">{{ switch.get_transaction_type_display }}</p>
+                                    <p class="text-sm text-gray-500">{{ switch.transaction_type }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        
+                        <!-- Status -->
+                        <td class="px-6 py-4">
+                            <form method="post" action="{% url 'switches:switch_toggle' switch.pk %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        class="relative inline-flex h-6 w-11 items-center rounded-full 
+                                            {% if switch.is_active %}bg-green-500{% else %}bg-gray-300{% endif %}
+                                            transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                                    <span class="sr-only">Toggle</span>
+                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform 
+                                        {% if switch.is_active %}translate-x-6{% else %}translate-x-1{% endif %}">
+                                    </span>
+                                </button>
+                            </form>
+                            <span class="ml-3 text-sm font-medium 
+                                {% if switch.is_active %}text-green-700{% else %}text-gray-700{% endif %}">
+                                {% if switch.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </td>
+                        
+                        <!-- Messages -->
+                        <td class="px-6 py-4">
+                            <div class="space-y-1 max-w-xs">
+                                {% if switch.off_message %}
+                                <div class="text-sm text-gray-700">
+                                    <span class="font-medium">Off:</span>
+                                    <span class="ml-1 text-gray-600 truncate">{{ switch.off_message|truncatechars:30 }}</span>
+                                </div>
+                                {% endif %}
+                                {% if switch.on_message %}
+                                <div class="text-sm text-gray-700">
+                                    <span class="font-medium">On:</span>
+                                    <span class="ml-1 text-gray-600 truncate">{{ switch.on_message|truncatechars:30 }}</span>
+                                </div>
+                                {% endif %}
+                                {% if not switch.off_message and not switch.on_message %}
+                                <span class="text-sm text-gray-500">No messages set</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        
+                        <!-- Last Updated -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ switch.updated_at|date:"M d, Y" }}</div>
+                            <div class="text-xs text-gray-500">{{ switch.updated_at|time:"H:i" }}</div>
+                        </td>
+                        
+                        <!-- Actions -->
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <div class="flex items-center space-x-2">
+                                <a href="{% url 'switches:switch_edit' switch.pk %}" 
+                                   class="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                   title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                
+                                <form method="post" 
+                                      action="{% url 'switches:switch_delete' switch.pk %}"
+                                      class="inline"
+                                      onsubmit="return confirm('Delete {{ switch.get_transaction_type_display }} switch?')">
+                                    {% csrf_token %}
+                                    <button type="submit" 
+                                            class="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                            title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center">
+                            <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-toggle-off text-amber-400 text-xl"></i>
+                            </div>
+                            <p class="text-gray-500 font-medium">No switches configured</p>
+                            <p class="text-sm text-gray-400 mt-1">Click "Add New Switch" to create your first switch</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </form>
+    </div>
+
+    <!-- Instructions -->
+    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                    <i class="fas fa-info-circle text-blue-600"></i>
+                </div>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-blue-900 mb-2">How Switches Work</h3>
+                <div class="text-blue-800 space-y-2">
+                    <p><i class="fas fa-toggle-on text-green-500 mr-2"></i>
+                        <strong>Active Switches:</strong> Feature is available to users
+                    </p>
+                    <p><i class="fas fa-toggle-off text-gray-500 mr-2"></i>
+                        <strong>Inactive Switches:</strong> Feature is disabled, users see the "off" message
+                    </p>
+                    <p><i class="fas fa-comment text-amber-500 mr-2"></i>
+                        <strong>Messages:</strong> Display custom messages when feature is on/off
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Select all checkboxes
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.switch-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+    updateSelectedCount();
+});
+
+// Update selected count
+function updateSelectedCount() {
+    const selected = document.querySelectorAll('.switch-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = selected;
+    
+    // Enable/disable bulk action button
+    const bulkButton = document.getElementById('applyBulkAction');
+    const bulkAction = document.getElementById('bulkAction');
+    
+    if (selected > 0 && bulkAction.value) {
+        bulkButton.disabled = false;
+    } else {
+        bulkButton.disabled = true;
+    }
+}
+
+// Attach event listeners to checkboxes
+document.querySelectorAll('.switch-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectedCount);
+});
+
+// Bulk action select change
+document.getElementById('bulkAction').addEventListener('change', function() {
+    const selected = document.querySelectorAll('.switch-checkbox:checked').length;
+    const bulkButton = document.getElementById('applyBulkAction');
+    
+    if (selected > 0 && this.value) {
+        bulkButton.disabled = false;
+    } else {
+        bulkButton.disabled = true;
+    }
+});
+
+// Bulk form submission confirmation
+document.querySelector('form[action*="bulk-toggle"]').addEventListener('submit', function(e) {
+    const action = document.getElementById('bulkAction').value;
+    const selected = document.querySelectorAll('.switch-checkbox:checked').length;
+    
+    if (!action || selected === 0) {
+        e.preventDefault();
+        return;
+    }
+    
+    let message = '';
+    if (action === 'delete') {
+        message = `Are you sure you want to delete ${selected} switch(es)?`;
+    } else if (action === 'activate') {
+        message = `Are you sure you want to activate ${selected} switch(es)?`;
+    } else if (action === 'deactivate') {
+        message = `Are you sure you want to deactivate ${selected} switch(es)?`;
+    }
+    
+    if (message && !confirm(message)) {
+        e.preventDefault();
+    }
+});
+
+// Toggle switch with confirmation
+document.querySelectorAll('form[action*="toggle/"]').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        const button = this.querySelector('button[type="submit"]');
+        const isActive = button.classList.contains('bg-green-500');
+        const feature = this.closest('tr').querySelector('.font-medium').textContent;
+        
+        const action = isActive ? 'deactivate' : 'activate';
+        if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${feature}?`)) {
+            e.preventDefault();
+        }
+    });
+});
+
+// Auto-refresh page every 60 seconds
+setTimeout(function() {
+    if (!document.hidden) {
+        location.reload();
+    }
+}, 60000);
+</script>
+{% endblock %}

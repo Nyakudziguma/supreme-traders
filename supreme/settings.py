@@ -47,6 +47,11 @@ INSTALLED_APPS = [
     'whatsapp',
     'ecocash',
     'deriv',
+    'orders',
+    'raspberrypi',
+    'rest_framework',
+    'books',
+    'marketing',
 
 ]
 
@@ -58,10 +63,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'accounts.middleware.TwoFactorMiddleware',
 ]
 
 ROOT_URLCONF = 'supreme.urls'
-
+TOTP_ISSUER = "Supreme AI Trading"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -90,7 +96,7 @@ AUTH_USER_MODEL = 'accounts.User'
 
 # Login/Logout URLs
 LOGIN_URL = 'accounts:login'
-LOGIN_REDIRECT_URL = 'accounts:dashboard'
+LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'accounts:login'
 
 # Database
@@ -132,11 +138,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Harare'
+USE_TZ = True
 
 USE_I18N = True
-
-USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
@@ -144,6 +149,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = '/var/www/supreme-traders/media/'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -167,3 +176,8 @@ DERIV_APP_ID=config('DERIV_APP_ID')
 WHATSAPP_TOKEN=config('WHATSAPP_TOKEN')
 WHATSAPP_URL = config('WHATSAPP_URL')
 WHATSAPP_NUMBER=config('WHATSAPP_NUMBER')
+ECO_API_URL = config('ECO_API_URL')
+ECO_USERNAME = config('ECO_USERNAME')
+ECO_PASSWORD = config('ECO_PASSWORD')
+ECO_ORIGINATOR = config('ECO_ORIGINATOR')
+ECO_DESTINATION = config('ECO_DESTINATION')
