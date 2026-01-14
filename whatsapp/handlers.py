@@ -214,6 +214,8 @@ class MessageHandler:
                 title = book.title
                 print("File path: ",file_url)
                 self.whatsapp_service.send_documents(phone_number,file_url, caption, title)
+                switch = Switch.objects.filter(transaction_type='books').first()
+                self.whatsapp_service.send_message(phone_number, switch.on_message)
                 self.whatsapp_service.update_session_step(phone_number,"menu", "menu")
                 return
 
