@@ -68,7 +68,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'supreme.urls'
-TOTP_ISSUER = "Supreme AI Trading"
+TOTP_ISSUER = "Finpal Trading"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -159,7 +159,7 @@ MEDIA_ROOT = '/var/www/supreme-traders/media/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-PASSWORD_RESET_SUBJECT = 'Supreme AI - Password Reset Request'
+PASSWORD_RESET_SUBJECT = 'Finpal - Password Reset Request'
 WHATSAPP_URL = config('WHATSAPP_URL')
 WHATSAPP_TOKEN=config('WHATSAPP_TOKEN')
 EMAIL_BACKEND = config('EMAIL_BACKEND')

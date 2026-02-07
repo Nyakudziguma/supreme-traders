@@ -345,7 +345,7 @@ class EcoCashTransaction(models.Model):
         # Billing cycle integration (deposit + withdrawal)
         if is_new_completion and self.transaction_type in ["deposit", "withdrawal","weltrade_deposit"]:
             billing, created = BillingCycle.objects.get_or_create(
-                client_name="Supreme AI",
+                client_name="Finpal",
                 paid=False,
                 defaults={
                     "start_date": now().date(),

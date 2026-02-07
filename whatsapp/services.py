@@ -54,7 +54,7 @@ class WhatsAppService:
                         "text": ''
                     },
                     "body": {
-                        "text": "👋 Welcome to Supreme Traders I’m Supreme AI, your virtual assistant 🤖. \n\nTap The Supreme Menu button below to explore your options."
+                        "text": "👋 Welcome to Supreme Traders I’m Finpal, your virtual assistant 🤖. \n\nTap The Supreme Menu button below to explore your options."
                     },
                     "action":
                         {
@@ -1847,7 +1847,7 @@ class WhatsAppService:
 📸 *To Complete Your Deposit:*
 
 1. Send *${transaction.total_amount}* via EcoCash to:
-   📱 *0777 123 456* (Supreme AI)
+   📱 *0777 123 456* (Finpal)
 
 2. Take a *screenshot* of the payment confirmation
 
