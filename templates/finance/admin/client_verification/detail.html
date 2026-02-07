@@ -14,25 +14,40 @@
             <div class="flex flex-col md:flex-row md:items-center justify-between mb-6">
                 <div class="flex items-center space-x-4 mb-4 md:mb-0">
                     <div class="w-16 h-16 rounded-full bg-gradient-to-br 
-                        {% if client.verified %}from-green-100 to-green-200{% else %}from-yellow-100 to-yellow-200{% endif %}
+                        {% if client.verified %}from-green-100 to-green-200
+                        {% elif client.rejected %}from-red-100 to-red-200
+                        {% else %}from-yellow-100 to-yellow-200{% endif %}
                         flex items-center justify-center">
-                        <i class="fas fa-user {% if client.verified %}text-green-600{% else %}text-yellow-600{% endif %} text-2xl"></i>
+                        <i class="fas fa-user 
+                        {% if client.verified %}text-green-600
+                        {% elif client.rejected %}text-red-600
+                        {% else %}text-yellow-600{% endif %} text-2xl"></i>
                     </div>
                     <div>
                         <h2 class="text-2xl font-bold text-gray-900">{{ client.name }}</h2>
                         <div class="flex items-center mt-2 space-x-3">
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
-                                {% if client.verified %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {% if client.verified %}bg-green-100 text-green-800
+                                {% elif client.rejected %}bg-red-100 text-red-800
+                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
                                 {% if client.verified %}
                                 <i class="fas fa-check-circle mr-1"></i> Verified
+                                {% elif client.rejected %}
+                                <i class="fas fa-times-circle mr-1"></i> Rejected
                                 {% else %}
-                                <i class="fas fa-clock mr-1"></i> Unverified
+                                <i class="fas fa-clock mr-1"></i> Pending
                                 {% endif %}
                             </span>
                             <span class="text-gray-600">
                                 <i class="fas fa-phone mr-1 text-amber-500"></i>
                                 {{ client.ecocash_number }}
                             </span>
+                            {% if client.crypto_wallet_address %}
+                            <span class="text-gray-600">
+                                <i class="fas fa-wallet mr-1 text-blue-500"></i>
+                                {{ client.crypto_wallet_address|truncatechars:15 }}
+                            </span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -48,16 +63,33 @@
                             <i class="fas fa-times-circle mr-2"></i> Unverify
                         </button>
                     </form>
-                    {% else %}
+                    {% elif client.rejected %}
                     <form method="post" 
-                          action="{% url 'finance:client_verification_verify' client.pk %}"
-                          onsubmit="return confirm('Verify {{ client.name }}?')">
+                          action="{% url 'finance:client_verification_approve' client.pk %}"
+                          onsubmit="return confirm('Approve {{ client.name }}?')">
                         {% csrf_token %}
                         <button type="submit" 
                                 class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition duration-200 font-medium flex items-center">
-                            <i class="fas fa-check-circle mr-2"></i> Verify
+                            <i class="fas fa-check-circle mr-2"></i> Approve
                         </button>
                     </form>
+                    {% else %}
+                    <div class="flex space-x-2">
+                        <form method="post" 
+                              action="{% url 'finance:client_verification_verify' client.pk %}"
+                              onsubmit="return confirm('Verify {{ client.name }}?')">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition duration-200 font-medium flex items-center">
+                                <i class="fas fa-check-circle mr-2"></i> Verify
+                            </button>
+                        </form>
+                        
+                        <button onclick="openRejectModal('{{ client.id }}', '{{ client.name|escapejs }}')"
+                                class="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition duration-200 font-medium flex items-center">
+                            <i class="fas fa-times-circle mr-2"></i> Reject
+                        </button>
+                    </div>
                     {% endif %}
                     
                     <a href="{% url 'finance:client_verification_list' %}" 
@@ -67,48 +99,87 @@
                 </div>
             </div>
             
-            <!-- Verification Details -->
+            <!-- Client Details -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Personal Information -->
                 <div class="space-y-4">
                     <div class="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                         <h4 class="font-semibold text-blue-900 mb-2 flex items-center">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            Verification Information
+                            <i class="fas fa-user-circle mr-2"></i>
+                            Personal Information
                         </h4>
-                        <div class="space-y-2">
-                            <div class="flex justify-between">
-                                <span class="text-blue-700">Status:</span>
-                                <span class="font-medium {% if client.verified %}text-green-700{% else %}text-yellow-700{% endif %}">
-                                    {{ client.status }}
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-blue-700 font-medium">Full Name:</span>
+                                <span class="font-medium text-gray-900">{{ client.name }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-blue-700 font-medium">EcoCash Number:</span>
+                                <span class="font-medium text-gray-900">{{ client.ecocash_number }}</span>
+                            </div>
+                            {% if client.crypto_wallet_address %}
+                            <div class="flex justify-between items-center">
+                                <span class="text-blue-700 font-medium">Crypto Wallet:</span>
+                                <span class="font-medium text-gray-900 font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                                    {{ client.crypto_wallet_address|truncatechars:30 }}
                                 </span>
-                            </div>
-                            {% if client.verified %}
-                            <div class="flex justify-between">
-                                <span class="text-blue-700">Verified By:</span>
-                                <span class="font-medium">{{ client.verified_by.username|default:"System" }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-blue-700">Verified At:</span>
-                                <span class="font-medium">{{ client.verified_at|date:"M d, Y H:i" }}</span>
                             </div>
                             {% endif %}
                         </div>
                     </div>
                     
-                    <div class="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                        <h4 class="font-semibold text-purple-900 mb-2 flex items-center">
-                            <i class="fas fa-calendar-alt mr-2"></i>
-                            Timestamps
+                    <!-- Verification Status -->
+                    <div class="p-4 bg-gradient-to-r 
+                        {% if client.verified %}from-green-50 to-green-100 border-green-200
+                        {% elif client.rejected %}from-red-50 to-red-100 border-red-200
+                        {% else %}from-yellow-50 to-yellow-100 border-yellow-200{% endif %}
+                        rounded-lg border">
+                        <h4 class="font-semibold 
+                            {% if client.verified %}text-green-900
+                            {% elif client.rejected %}text-red-900
+                            {% else %}text-yellow-900{% endif %} mb-2 flex items-center">
+                            <i class="fas fa-shield-alt mr-2"></i>
+                            Verification Status
                         </h4>
                         <div class="space-y-2">
                             <div class="flex justify-between">
-                                <span class="text-purple-700">Created:</span>
-                                <span class="font-medium">{{ client.created_at|date:"M d, Y H:i" }}</span>
+                                <span class="{% if client.verified %}text-green-700
+                                            {% elif client.rejected %}text-red-700
+                                            {% else %}text-yellow-700{% endif %}">Status:</span>
+                                <span class="font-medium {% if client.verified %}text-green-800
+                                            {% elif client.rejected %}text-red-800
+                                            {% else %}text-yellow-800{% endif %}">
+                                    {% if client.verified %}
+                                        ✅ Verified
+                                    {% elif client.rejected %}
+                                        ❌ Rejected
+                                    {% else %}
+                                        ⏳ Pending Review
+                                    {% endif %}
+                                </span>
                             </div>
-                            <div class="flex justify-between">
-                                <span class="text-purple-700">Last Updated:</span>
-                                <span class="font-medium">{{ client.updated_at|date:"M d, Y H:i" }}</span>
+                            
+                            {% if client.rejected and client.rejection_reason %}
+                            <div class="mt-3 p-2 bg-red-50 border border-red-200 rounded">
+                                <p class="text-sm text-red-800">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <strong>Rejection Reason:</strong> {{ client.rejection_reason }}
+                                </p>
                             </div>
+                            {% endif %}
+                            
+                            {% if client.verified %}
+                            <div class="mt-3 space-y-1">
+                                <div class="flex justify-between">
+                                    <span class="text-green-700">Verified By:</span>
+                                    <span class="font-medium">{{ client.verified_by.username|default:"System" }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-green-700">Verified At:</span>
+                                    <span class="font-medium">{{ client.verified_at|date:"M d, Y H:i" }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -119,15 +190,17 @@
                         <i class="fas fa-file-alt text-amber-600 mr-2"></i>
                         Verification Documents
                     </h4>
+                    
+                    {% if client.national_id_image or client.selfie_with_id %}
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="text-center">
-                            <div class="border-2 border-dashed border-amber-300 rounded-xl p-4 h-40 flex flex-col items-center justify-center hover:border-amber-400 transition-colors">
+                        <div>
+                            <div class="border-2 border-dashed border-amber-300 rounded-xl p-4 h-40 flex flex-col items-center justify-center hover:border-amber-400 transition-colors bg-gradient-to-br from-blue-50 to-blue-100">
                                 {% if client.national_id_image %}
                                 <a href="{{ client.national_id_image.url }}" 
                                    target="_blank"
-                                   class="flex flex-col items-center justify-center h-full w-full">
-                                    <i class="fas fa-id-card text-blue-600 text-3xl mb-3"></i>
-                                    <span class="text-sm font-medium text-gray-700">National ID</span>
+                                   class="flex flex-col items-center justify-center h-full w-full group">
+                                    <i class="fas fa-id-card text-blue-600 text-3xl mb-3 group-hover:text-blue-700 transition-colors"></i>
+                                    <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">National ID</span>
                                     <span class="text-xs text-green-600 mt-1">Click to view</span>
                                 </a>
                                 {% else %}
@@ -137,16 +210,19 @@
                                 </div>
                                 {% endif %}
                             </div>
+                            <p class="text-xs text-gray-500 text-center mt-2">
+                                National ID/Passport
+                            </p>
                         </div>
                         
-                        <div class="text-center">
-                            <div class="border-2 border-dashed border-amber-300 rounded-xl p-4 h-40 flex flex-col items-center justify-center hover:border-amber-400 transition-colors">
+                        <div>
+                            <div class="border-2 border-dashed border-amber-300 rounded-xl p-4 h-40 flex flex-col items-center justify-center hover:border-amber-400 transition-colors bg-gradient-to-br from-purple-50 to-purple-100">
                                 {% if client.selfie_with_id %}
                                 <a href="{{ client.selfie_with_id.url }}" 
                                    target="_blank"
-                                   class="flex flex-col items-center justify-center h-full w-full">
-                                    <i class="fas fa-camera text-purple-600 text-3xl mb-3"></i>
-                                    <span class="text-sm font-medium text-gray-700">Selfie with ID</span>
+                                   class="flex flex-col items-center justify-center h-full w-full group">
+                                    <i class="fas fa-camera text-purple-600 text-3xl mb-3 group-hover:text-purple-700 transition-colors"></i>
+                                    <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">Selfie with ID</span>
                                     <span class="text-xs text-green-600 mt-1">Click to view</span>
                                 </a>
                                 {% else %}
@@ -156,25 +232,51 @@
                                 </div>
                                 {% endif %}
                             </div>
+                            <p class="text-xs text-gray-500 text-center mt-2">
+                                Selfie holding ID
+                            </p>
                         </div>
+                    </div>
+                    {% else %}
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50">
+                        <i class="fas fa-file-upload text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-500 font-medium mb-2">No documents uploaded</p>
+                        <p class="text-sm text-gray-400">Client hasn't uploaded any verification documents</p>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Document Requirements -->
+                    <div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <h5 class="font-medium text-amber-800 mb-2 flex items-center">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Document Requirements:
+                        </h5>
+                        <ul class="text-sm text-amber-700 space-y-1">
+                            <li><i class="fas fa-check-circle text-xs mr-1"></i> Clear photo of National ID or Passport</li>
+                            <li><i class="fas fa-check-circle text-xs mr-1"></i> Selfie holding the ID next to face</li>
+                            <li><i class="fas fa-check-circle text-xs mr-1"></i> All details must be readable</li>
+                            <li><i class="fas fa-check-circle text-xs mr-1"></i> Name on ID must match provided name</li>
+                        </ul>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- Actions -->
+        <!-- Actions Section -->
         <div class="px-6 py-4 border-t border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100">
             <div class="flex justify-between items-center">
                 <div class="text-sm text-amber-700">
                     <i class="fas fa-shield-alt mr-2"></i>
                     {% if client.verified %}
-                    This client can perform restricted transactions
+                    ✅ This client is verified and can perform all transactions
+                    {% elif client.rejected %}
+                    ❌ This client's verification was rejected
                     {% else %}
-                    This client needs verification for restricted transactions
+                    ⏳ This client needs verification for restricted transactions
                     {% endif %}
                 </div>
                 <div class="flex space-x-3">
-                    <button onclick="openEditClientModal('{{ client.id }}', '{{ client.name|escapejs }}', '{{ client.ecocash_number }}')"
+                    <button onclick="openEditClientModal('{{ client.id }}', '{{ client.name|escapejs }}', '{{ client.ecocash_number|escapejs }}', '{{ client.crypto_wallet_address|default:""|escapejs }}')"
                             class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition duration-200 font-medium flex items-center">
                         <i class="fas fa-edit mr-2"></i> Edit Client
                     </button>
@@ -206,13 +308,14 @@
             {% for transaction in related_transactions %}
             <div class="px-6 py-4 hover:bg-amber-50 transition-colors">
                 <div class="flex items-center justify-between">
-                    <div>
+                    <div class="flex-1">
                         <p class="font-medium text-gray-900">
                             {{ transaction.reference_number }}
                         </p>
                         <div class="flex items-center mt-1 space-x-4 text-sm text-gray-600">
-                            <span>Amount: ${{ transaction.amount }}</span>
-                            <span>Type: {{ transaction.transaction_type|title }}</span>
+                            <span><i class="fas fa-dollar-sign mr-1"></i>${{ transaction.amount }}</span>
+                            <span><i class="fas fa-exchange-alt mr-1"></i>{{ transaction.transaction_type|title }}</span>
+                            <span><i class="fas fa-user mr-1"></i>{{ transaction.user.username|truncatechars:15 }}</span>
                             <span class="px-2 py-1 rounded text-xs 
                                 {% if transaction.status == 'completed' %}bg-green-100 text-green-800
                                 {% elif transaction.status == 'failed' %}bg-red-100 text-red-800
@@ -220,20 +323,30 @@
                                 {{ transaction.status|title }}
                             </span>
                         </div>
+                        {% if transaction.notes %}
+                        <p class="text-xs text-gray-500 mt-2 truncate">
+                            <i class="fas fa-sticky-note mr-1"></i>
+                            {{ transaction.notes }}
+                        </p>
+                        {% endif %}
                     </div>
                     <div class="text-right">
-                        <div class="text-sm text-gray-900">{{ transaction.created_at|date:"M d, Y" }}</div>
+                        <div class="text-sm text-gray-900 font-medium">{{ transaction.created_at|date:"M d, Y" }}</div>
                         <div class="text-xs text-gray-500">{{ transaction.created_at|time:"H:i" }}</div>
+                        <a href="{% url 'finance:admin_transaction_detail' transaction.pk %}" 
+                           class="text-xs text-amber-600 hover:text-amber-700 mt-1 inline-block">
+                            View Details
+                        </a>
                     </div>
                 </div>
             </div>
             {% empty %}
-            <div class="px-6 py-8 text-center">
-                <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-exchange-alt text-amber-400 text-xl"></i>
+            <div class="px-6 py-12 text-center">
+                <div class="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-exchange-alt text-amber-400 text-2xl"></i>
                 </div>
-                <p class="text-gray-500">No transactions found for this client</p>
-                <p class="text-sm text-gray-400 mt-1">Transactions will appear here once made</p>
+                <p class="text-gray-500 font-medium">No transactions found for this client</p>
+                <p class="text-sm text-gray-400 mt-1">Transactions will appear here once the client makes payments</p>
             </div>
             {% endfor %}
         </div>
@@ -242,119 +355,264 @@
         <div class="px-6 py-4 border-t border-amber-200 bg-gray-50">
             <a href="{% url 'finance:admin_transaction_list' %}?search={{ client.ecocash_number }}" 
                class="text-sm text-amber-600 hover:text-amber-700 font-medium flex items-center">
+                <i class="fas fa-external-link-alt mr-2"></i>
                 View all transactions for this client
-                <i class="fas fa-arrow-right ml-1 text-xs"></i>
             </a>
         </div>
         {% endif %}
     </div>
 </div>
 
-<!-- Edit Client Modal (same as in list template) -->
-<div id="editClientModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-bold text-gray-900">
-                <i class="fas fa-edit text-amber-600 mr-2"></i>
-                Edit Client
-            </h3>
-            <button onclick="closeEditClientModal()" 
-                    class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
-                <i class="fas fa-times text-lg"></i>
-            </button>
-        </div>
-        
-        <form id="editClientForm" method="post" action="{% url 'finance:client_verification_update' client.pk %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-user text-blue-500 mr-2"></i>
-                        Full Name *
-                    </label>
-                    <input type="text" 
-                           name="name" 
-                           id="editClientName"
-                           value="{{ client.name }}"
-                           required
-                           class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-phone text-green-500 mr-2"></i>
-                        EcoCash Number *
-                    </label>
-                    <input type="text" 
-                           name="ecocash_number" 
-                           id="editClientPhone"
-                           value="{{ client.ecocash_number }}"
-                           required
-                           class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            National ID Image
-                        </label>
-                        <input type="file" 
-                               name="national_id_image"
-                               accept="image/*"
-                               class="w-full px-4 py-2 border-2 border-dashed border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+<!-- Edit Client Modal -->
+<div id="editClientModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-slide-up">
+            <form id="editClientForm" method="post" action="{% url 'finance:client_verification_update' client.pk %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                            <i class="fas fa-edit text-amber-600 mr-2"></i>
+                            Edit Client Information
+                        </h3>
+                        <button type="button" onclick="closeEditClientModal()" 
+                                class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
                     </div>
                     
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Selfie with ID
-                        </label>
-                        <input type="file" 
-                               name="selfie_with_id"
-                               accept="image/*"
-                               class="w-full px-4 py-2 border-2 border-dashed border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                    <div class="space-y-4">
+                        <!-- Full Name -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-user text-blue-500 mr-2"></i>
+                                Full Name *
+                            </label>
+                            <input type="text" 
+                                   name="name" 
+                                   id="editClientName"
+                                   required
+                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                        </div>
+                        
+                        <!-- EcoCash Number -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-phone text-green-500 mr-2"></i>
+                                EcoCash Number *
+                            </label>
+                            <input type="text" 
+                                   name="ecocash_number" 
+                                   id="editClientPhone"
+                                   required
+                                   pattern="7[0-9]{8}"
+                                   title="Enter 9-digit number starting with 7"
+                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                            <p class="text-xs text-gray-500 mt-2">Format: 7XXXXXXXX (9 digits starting with 7)</p>
+                        </div>
+                        
+                        <!-- Crypto Wallet Address -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-wallet text-purple-500 mr-2"></i>
+                                Crypto Wallet Address (Optional)
+                            </label>
+                            <input type="text" 
+                                   name="crypto_wallet_address" 
+                                   id="editClientWallet"
+                                   placeholder="e.g., Txxxxxx... (TRC20 wallet for Weltrade)"
+                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200">
+                            <p class="text-xs text-gray-500 mt-2">For Weltrade withdrawals (USDT TRC20)</p>
+                        </div>
+                        
+                        <!-- Document Updates -->
+                        <div class="pt-4 border-t border-gray-200">
+                            <h4 class="font-medium text-gray-700 mb-3 flex items-center">
+                                <i class="fas fa-file-upload text-amber-500 mr-2"></i>
+                                Update Documents (Optional)
+                            </h4>
+                            
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-2">National ID Image</label>
+                                    <div class="relative">
+                                        <input type="file" 
+                                               name="national_id_image"
+                                               accept="image/*,.pdf"
+                                               class="w-full px-4 py-3 border-2 border-dashed border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-2">Selfie with ID</label>
+                                    <div class="relative">
+                                        <input type="file" 
+                                               name="selfie_with_id"
+                                               accept="image/*"
+                                               class="w-full px-4 py-3 border-2 border-dashed border-amber-300 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all duration-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                <p class="text-sm text-amber-700">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    Leave document fields empty to keep existing files
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 flex justify-end space-x-3">
+                        <button type="button" 
+                                onclick="closeEditClientModal()"
+                                class="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="btn-gold px-4 py-2.5 rounded-lg font-semibold">
+                            <i class="fas fa-save mr-2"></i>
+                            Update Client
+                        </button>
                     </div>
                 </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Client Modal -->
+<div id="rejectClientModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-slide-up">
+            <form id="rejectClientForm" method="post" action="{% url 'finance:client_verification_reject' client.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="client_id" id="rejectClientId">
                 
-                <div class="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                    <p class="text-sm text-amber-700">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        Leaving image fields empty will keep existing images
+                <div class="p-6">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                            <i class="fas fa-times-circle text-red-600 text-2xl"></i>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Reject Verification</h3>
+                    <p class="text-gray-600 text-center mb-6" id="rejectClientName">
+                        <!-- Client name will be inserted here -->
                     </p>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-comment-alt text-red-500 mr-2"></i>
+                            Rejection Reason *
+                        </label>
+                        <textarea name="rejection_reason" 
+                                  id="rejectionReason"
+                                  rows="4"
+                                  placeholder="Specify why this verification is being rejected..."
+                                  required
+                                  class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all duration-200"></textarea>
+                        <p class="text-xs text-gray-500 mt-2">This reason will be shown to the client</p>
+                    </div>
+                    
+                    <div class="flex justify-center space-x-3">
+                        <button type="button" 
+                                onclick="closeRejectModal()"
+                                class="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 font-medium transition-colors">
+                            <i class="fas fa-times-circle mr-2"></i>
+                            Confirm Rejection
+                        </button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="mt-8 flex justify-end space-x-3">
-                <button type="button" 
-                        onclick="closeEditClientModal()"
-                        class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                    Cancel
-                </button>
-                <button type="submit" 
-                        class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-lg hover:from-amber-600 hover:to-amber-700 transition-colors font-medium">
-                    <i class="fas fa-save mr-2"></i> Update Client
-                </button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
-function openEditClientModal(clientId, clientName, clientPhone) {
-    document.getElementById('editClientModal').classList.remove('hidden');
+// Edit Client Modal Functions
+let currentClientId = null;
+
+function openEditClientModal(clientId, clientName, clientPhone, clientWallet = '') {
+    currentClientId = clientId;
     
     // Set form values
-    document.getElementById('editClientName').value = clientName;
-    document.getElementById('editClientPhone').value = clientPhone;
+    document.getElementById('editClientName').value = clientName || '';
+    document.getElementById('editClientPhone').value = clientPhone || '';
+    document.getElementById('editClientWallet').value = clientWallet || '';
+    
+    // Set form action
+    document.getElementById('editClientForm').action = `/finance/client-verification/${clientId}/update/`;
+    
+    document.getElementById('editClientModal').classList.remove('hidden');
 }
 
 function closeEditClientModal() {
     document.getElementById('editClientModal').classList.add('hidden');
+    currentClientId = null;
 }
 
-// Close modal on escape key
+// Reject Client Modal Functions
+function openRejectModal(clientId, clientName) {
+    currentClientId = clientId;
+    
+    // Set client name
+    document.getElementById('rejectClientName').textContent = `Reject verification for ${clientName}?`;
+    document.getElementById('rejectClientId').value = clientId;
+    
+    // Set form action
+    document.getElementById('rejectClientForm').action = `/finance/client-verification/${clientId}/reject/`;
+    
+    document.getElementById('rejectClientModal').classList.remove('hidden');
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectClientModal').classList.add('hidden');
+    document.getElementById('rejectionReason').value = '';
+    currentClientId = null;
+}
+
+// Close modals with Escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeEditClientModal();
+        closeRejectModal();
+    }
+});
+
+// Close modals when clicking outside
+document.querySelectorAll('.fixed.bg-black').forEach(overlay => {
+    overlay.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeEditClientModal();
+            closeRejectModal();
+        }
+    });
+});
+
+// Phone number formatting
+function formatPhoneNumber(input) {
+    let value = input.value.replace(/\D/g, '');
+    
+    // Ensure it starts with 7 and is 9 digits
+    if (value.startsWith('7') && value.length === 9) {
+        input.value = value;
+    } else if (value.length > 9) {
+        input.value = value.substring(0, 9);
+    }
+}
+
+// Initialize phone number formatting
+document.addEventListener('DOMContentLoaded', function() {
+    const phoneInput = document.getElementById('editClientPhone');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function() {
+            formatPhoneNumber(this);
+        });
     }
 });
 </script>

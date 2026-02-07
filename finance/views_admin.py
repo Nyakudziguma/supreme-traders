@@ -18,6 +18,13 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from accounts.models import User
 from whatsapp.models import ClientVerification
 from ecocash.models import CashOutTransaction
+from django.views.decorators.http import require_POST
+from django.db import transaction
+from .forms import CashOutTransactionForm
+import random
+import string
+import json
+from datetime import datetime
 
 def is_admin(user):
     return user.is_authenticated and user.user_type == 'admin'
@@ -722,27 +729,26 @@ def client_verification_create(request):
 @login_required
 @user_passes_test(is_admin)
 def client_verification_verify(request, pk):
-    """Verify a client"""
-    if request.method == 'POST':
-        try:
-            client = get_object_or_404(ClientVerification, pk=pk)
-            
-            if client.verified:
-                messages.warning(request, f'Client {client.name} is already verified')
-            else:
-                client.verified = True
-                client.verified_by = request.user
-                client.verified_at = datetime.now()
-                client.save()
-                
-                messages.success(request, f'Client {client.name} has been verified successfully')
-            
-            return redirect('finance:client_verification_detail', pk=client.pk)
-            
-        except Exception as e:
-            messages.error(request, f'Error verifying client: {str(e)}')
+    from whatsapp.services import WhatsAppService
+    service=WhatsAppService()
+
+    """Approve a previously rejected client."""
+    client = get_object_or_404(ClientVerification, pk=pk)
     
-    return redirect('finance:client_verification_list')
+    try:
+        client.rejected = False
+        client.verified = True
+        client.rejection_reason = None
+        client.verified_by = request.user
+        client.verified_at = timezone.now()
+        client.save()
+
+        service.send_message(client.trader.phone_number, "Good news, your KYCs have been veried. You can now make weltrade deposits!")      
+        messages.success(request, f'Client {client.name} approved and verified.')
+    except Exception as e:
+        messages.error(request, f'Error approving client: {str(e)}')
+    
+    return redirect('finance:client_verification_detail', pk=pk)
 
 @login_required
 @user_passes_test(is_admin)
@@ -890,6 +896,98 @@ def client_verification_bulk_action(request):
         return redirect('finance:client_verification_list')
     
     return redirect('finance:client_verification_list')
+
+# finance/views/client_verification_views.py
+@login_required
+@user_passes_test(is_admin)
+@require_POST
+def client_verification_reject(request, pk):
+    from whatsapp.services import WhatsAppService
+    service=WhatsAppService()
+
+    """Reject client verification."""
+    client = get_object_or_404(ClientVerification, pk=pk)
+    rejection_reason = request.POST.get('rejection_reason', '').strip()
+    
+    if not rejection_reason:
+        messages.error(request, 'Rejection reason is required.')
+        return redirect('finance:client_verification_detail', pk=pk)
+    
+    try:
+        client.rejected = True
+        client.verified = False
+        client.rejection_reason = rejection_reason
+        client.verified_by = request.user
+        client.verified_at = timezone.now()
+        client.save()
+        service.send_message(client.trader.phone_number, f"Your KYCs have been rejected, {rejection_reason}")
+        
+        messages.success(request, f'Client {client.name} verification rejected.')
+    except Exception as e:
+        messages.error(request, f'Error rejecting verification: {str(e)}')
+    
+    return redirect('finance:client_verification_detail', pk=pk)
+
+@login_required
+@user_passes_test(is_admin)
+@require_POST
+def client_verification_approve(request, pk):
+    from whatsapp.services import WhatsAppService
+    service=WhatsAppService()
+
+    """Approve a previously rejected client."""
+    client = get_object_or_404(ClientVerification, pk=pk)
+    
+    try:
+        client.rejected = False
+        client.verified = True
+        client.rejection_reason = None
+        client.verified_by = request.user
+        client.verified_at = timezone.now()
+        client.save()
+
+        service.send_message(client.trader.phone_number, "Good news, your KYCs have been veried. You can now make weltrade deposits!")      
+        messages.success(request, f'Client {client.name} approved and verified.')
+    except Exception as e:
+        messages.error(request, f'Error approving client: {str(e)}')
+    
+    return redirect('finance:client_verification_detail', pk=pk)
+
+@login_required
+@user_passes_test(is_admin)
+def client_verification_update(request, pk):
+    """Update client verification information."""
+    client = get_object_or_404(ClientVerification, pk=pk)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        ecocash_number = request.POST.get('ecocash_number', '').strip()
+        crypto_wallet_address = request.POST.get('crypto_wallet_address', '').strip()
+        
+        if not name or not ecocash_number:
+            messages.error(request, 'Name and EcoCash number are required.')
+            return redirect('finance:client_verification_detail', pk=pk)
+        
+        try:
+            client.name = name
+            client.ecocash_number = ecocash_number
+            client.crypto_wallet_address = crypto_wallet_address or None
+            
+            # Handle file uploads
+            if 'national_id_image' in request.FILES:
+                client.national_id_image = request.FILES['national_id_image']
+            
+            if 'selfie_with_id' in request.FILES:
+                client.selfie_with_id = request.FILES['selfie_with_id']
+            
+            client.save()
+            messages.success(request, f'Client {client.name} updated successfully.')
+        except Exception as e:
+            messages.error(request, f'Error updating client: {str(e)}')
+        
+        return redirect('finance:client_verification_detail', pk=pk)
+    
+    return redirect('finance:client_verification_detail', pk=pk)
 
 @login_required
 @user_passes_test(is_admin)
@@ -1076,3 +1174,50 @@ def cashout_transaction_api(request):
         return JsonResponse({'error': 'Transaction not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+    
+# views.py - Update the create views
+
+@login_required
+@user_passes_test(is_admin)
+def cashout_transaction_create(request):
+    """Create a new cashout transaction"""
+    if request.method == 'POST':
+        form = CashOutTransactionForm(request.POST)
+        if form.is_valid():
+            try:
+                # Generate a unique transaction ID if not provided
+                txn_id = form.cleaned_data.get('txn_id')
+                if not txn_id:
+                    txn_id = f"CASHOUT-{datetime.now().strftime('%Y%m%d%H%M%S')}-{random.randint(1000, 9999)}"
+                
+                # Check if transaction ID already exists
+                if CashOutTransaction.objects.filter(txn_id=txn_id).exists():
+                    txn_id = f"{txn_id}-{random.randint(100, 999)}"
+                
+                # Create the transaction
+                cashout_transaction = form.save(commit=False)
+                cashout_transaction.txn_id = txn_id
+                
+                # Generate verification code if not provided
+                if not cashout_transaction.verification_code:
+                    cashout_transaction.verification_code = ''.join(random.choices(string.digits, k=6))
+                
+                cashout_transaction.save()
+                
+                messages.success(request, f'Cashout transaction created successfully! TXN ID: {txn_id}')
+                return redirect('finance:cashout_transaction_list')
+                
+            except Exception as e:
+                messages.error(request, f'Error creating transaction: {str(e)}')
+        else:
+            # Pass form errors to template
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        form = CashOutTransactionForm()
+    
+    context = {
+        'form': form,
+    }
+    return render(request, 'finance/admin/cashout_transactions/create.html', context)

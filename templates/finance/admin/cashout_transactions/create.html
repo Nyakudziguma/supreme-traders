@@ -1,0 +1,629 @@
+<!-- templates/finance/admin/cashout_transactions/create.html -->
+{% extends 'base.html' %}
+
+{% block title %}Create CashOut Transaction - Supreme AI{% endblock %}
+
+{% block page_title %}Create CashOut Transaction{% endblock %}
+{% block page_subtitle %}Add a new cashout transaction manually{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Display Messages -->
+    {% if messages %}
+    <div class="mb-6">
+        {% for message in messages %}
+        <div class="p-4 mb-3 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700 border border-red-200{% elif message.tags == 'success' %}bg-green-100 text-green-700 border border-green-200{% else %}bg-blue-100 text-blue-700 border border-blue-200{% endif %}">
+            <div class="flex items-center">
+                <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} mr-2"></i>
+                {{ message }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="bg-white rounded-xl border border-amber-200 p-6 shadow-sm">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Left Column -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                        <i class="fas fa-user-circle mr-2 text-blue-500"></i>Customer Information
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Amount *
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2.5 text-gray-500">$</span>
+                            <input type="number" 
+                                   name="amount" 
+                                   id="id_amount"
+                                   value="{{ form.amount.value|default_if_none:'' }}"
+                                   step="0.01"
+                                   min="0"
+                                   required
+                                   class="w-full pl-8 pr-4 py-2 border {% if form.amount.errors %}border-red-300{% else %}border-gray-300{% endif %} rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
+                                   placeholder="0.00">
+                        </div>
+                        {% if form.amount.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {% for error in form.amount.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Customer Name *
+                        </label>
+                        <input type="text" 
+                               name="name" 
+                               id="id_name"
+                               value="{{ form.name.value|default_if_none:'' }}"
+                               required
+                               class="w-full px-4 py-2 border {% if form.name.errors %}border-red-300{% else %}border-gray-300{% endif %} rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
+                               placeholder="Customer Name">
+                        {% if form.name.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {% for error in form.name.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Phone Number *
+                        </label>
+                        <input type="text" 
+                               name="phone" 
+                               id="id_phone"
+                               value="{{ form.phone.value|default_if_none:'' }}"
+                               required
+                               class="w-full px-4 py-2 border {% if form.phone.errors %}border-red-300{% else %}border-gray-300{% endif %} rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
+                               placeholder="+1234567890">
+                        {% if form.phone.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {% for error in form.phone.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Trader (Optional)
+                        </label>
+                        <select name="trader" 
+                                id="id_trader"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                            <option value="">-- Select Trader --</option>
+                            {% for user in form.fields.trader.queryset %}
+                            <option value="{{ user.id }}" {% if form.trader.value == user.id %}selected{% endif %}>
+                                {{ user.email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Right Column -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                        <i class="fas fa-cog mr-2 text-green-500"></i>Transaction Details
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Transaction ID *
+                        </label>
+                        <input type="text" 
+                               name="txn_id" 
+                               id="id_txn_id"
+                               value="{{ form.txn_id.value|default_if_none:'' }}"
+                               required
+                               class="w-full px-4 py-2 border {% if form.txn_id.errors %}border-red-300{% else %}border-gray-300{% endif %} rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
+                               placeholder="">
+                        
+                        {% if form.txn_id.errors %}
+                        <div class="mt-1 text-sm text-red-600">
+                            {% for error in form.txn_id.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Verification Code
+                        </label>
+                        <input type="text" 
+                               name="verification_code" 
+                               id="id_verification_code"
+                               value="{{ form.verification_code.value|default_if_none:'' }}"
+                               maxlength="6"
+                               pattern="[0-9]{6}"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
+                               placeholder="6-digit code (auto-generated)">
+                        <div class="mt-2 flex items-center space-x-2">
+                            <button type="button" 
+                                    onclick="generateVerificationCode()"
+                                    class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center">
+                                <i class="fas fa-key mr-1"></i>Generate Code
+                            </button>
+                            <button type="button" 
+                                    onclick="copyVerificationCode()"
+                                    class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 flex items-center">
+                                <i class="fas fa-copy mr-1"></i>Copy
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="form-group">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Previous Balance
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-gray-500">$</span>
+                                <input type="number" 
+                                       name="prev_bal" 
+                                       id="id_prev_bal"
+                                       value="{{ form.prev_bal.value|default_if_none:0 }}"
+                                       step="0.01"
+                                       min="0"
+                                       class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                New Balance
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-gray-500">$</span>
+                                <input type="number" 
+                                       name="new_bal" 
+                                       id="id_new_bal"
+                                       value="{{ form.new_bal.value|default_if_none:0 }}"
+                                       step="0.01"
+                                       min="0"
+                                       class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="form-group">
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       name="completed" 
+                                       id="id_completed"
+                                       {% if form.completed.value %}checked{% endif %}
+                                       class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                                <label for="id_completed" class="ml-2 text-sm text-gray-700">Completed</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       name="flagged" 
+                                       id="id_flagged"
+                                       {% if form.flagged.value %}checked{% endif %}
+                                       class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                                       onchange="toggleFlagReason()">
+                                <label for="id_flagged" class="ml-2 text-sm text-gray-700">Flagged</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       name="fradulent" 
+                                       id="id_fradulent"
+                                       {% if form.fradulent.value %}checked{% endif %}
+                                       class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                                <label for="id_fradulent" class="ml-2 text-sm text-gray-700">Fraudulent</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       name="low_limit" 
+                                       id="id_low_limit"
+                                       {% if form.low_limit.value %}checked{% endif %}
+                                       class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                                <label for="id_low_limit" class="ml-2 text-sm text-gray-700">Low Limit</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Full Width Fields -->
+            <div class="mt-6 space-y-4">
+                <div class="form-group">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Transaction Message/Body
+                    </label>
+                    <textarea name="body" 
+                              id="id_body"
+                              rows="4"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
+                              placeholder="Transaction details or message">{{ form.body.value|default_if_none:'' }}</textarea>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Flag Reason (if flagged)
+                        </label>
+                        <textarea name="flag_reason" 
+                                  id="id_flag_reason"
+                                  rows="2"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
+                                  placeholder="Reason for flagging">{{ form.flag_reason.value|default_if_none:'' }}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Flagged By
+                        </label>
+                        <input type="text" 
+                               name="flagged_by" 
+                               id="id_flagged_by"
+                               value="{{ form.flagged_by.value|default_if_none:'' }}"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-500"
+                               placeholder="Admin name who flagged">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                <div>
+                    <a href="{% url 'finance:cashout_transaction_list' %}" 
+                       class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200 font-medium flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to List
+                    </a>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button type="reset" 
+                            onclick="resetForm()"
+                            class="px-4 py-2 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition duration-200 font-medium">
+                        Reset
+                    </button>
+                    
+                    <button type="submit" 
+                            class="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition duration-200 font-medium flex items-center">
+                        <i class="fas fa-check mr-2"></i> Create Transaction
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Instructions -->
+    <div class="mt-6 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                    <i class="fas fa-info-circle text-blue-600"></i>
+                </div>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-blue-900">Creating Transactions</h3>
+                <div class="mt-2 text-blue-800 space-y-2">
+                    <p><i class="fas fa-star text-yellow-500 mr-2"></i>
+                        <strong>Required fields:</strong> Amount, Name, Phone, and Transaction ID are required
+                    </p>
+                    <p><i class="fas fa-bolt text-green-500 mr-2"></i>
+                        <strong>Transaction ID Format:</strong> Should start with SPFX (e.g., SPFX123456789)
+                    </p>
+                    <p><i class="fas fa-key text-purple-500 mr-2"></i>
+                        <strong>Verification Code:</strong> 6-digit code, auto-generated if left empty
+                    </p>
+                    <p><i class="fas fa-user-shield text-red-500 mr-2"></i>
+                        <strong>Flagging:</strong> Use the flag checkboxes and provide reason for suspicious transactions
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Generate SPFX transaction ID
+function generateSPFXTxnId() {
+    const timestamp = Date.now().toString();
+    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const uniqueId = (timestamp + randomNum).substr(-9).padStart(9, '0');
+    const txnId = `SPFX${uniqueId}`;
+    document.getElementById('id_txn_id').value = txnId;
+    
+    // Show notification
+    showNotification('SPFX ID generated successfully!', 'success');
+}
+
+// Generate verification code
+function generateVerificationCode() {
+    const code = Math.floor(100000 + Math.random() * 900000);
+    document.getElementById('id_verification_code').value = code;
+    
+    // Show notification
+    showNotification('Verification code generated!', 'success');
+}
+
+// Copy transaction ID to clipboard
+function copyTxnId() {
+    const txnIdField = document.getElementById('id_txn_id');
+    if (txnIdField.value) {
+        txnIdField.select();
+        txnIdField.setSelectionRange(0, 99999); // For mobile devices
+        document.execCommand('copy');
+        showNotification('Transaction ID copied to clipboard!', 'success');
+    } else {
+        showNotification('Please generate or enter a Transaction ID first', 'error');
+    }
+}
+
+// Copy verification code to clipboard
+function copyVerificationCode() {
+    const codeField = document.getElementById('id_verification_code');
+    if (codeField.value) {
+        codeField.select();
+        codeField.setSelectionRange(0, 99999); // For mobile devices
+        document.execCommand('copy');
+        showNotification('Verification code copied to clipboard!', 'success');
+    } else {
+        showNotification('Please generate or enter a verification code first', 'error');
+    }
+}
+
+// Toggle flag reason visibility and focus
+function toggleFlagReason() {
+    const flaggedCheckbox = document.getElementById('id_flagged');
+    const flagReasonField = document.getElementById('id_flag_reason');
+    
+    if (flaggedCheckbox.checked) {
+        flagReasonField.placeholder = 'Please provide reason for flagging...';
+        flagReasonField.focus();
+    }
+}
+
+// Format currency inputs
+document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('blur', function() {
+        if (this.value && !isNaN(this.value)) {
+            this.value = parseFloat(this.value).toFixed(2);
+        }
+    });
+});
+
+// Auto-calculate new balance based on amount and previous balance
+document.getElementById('id_amount').addEventListener('blur', function() {
+    const amount = parseFloat(this.value) || 0;
+    const prevBal = parseFloat(document.getElementById('id_prev_bal').value) || 0;
+    
+    if (amount > 0 && prevBal > 0) {
+        const newBal = Math.max(0, prevBal - amount);
+        document.getElementById('id_new_bal').value = newBal.toFixed(2);
+    }
+});
+
+// Validate SPFX format
+function validateSPFXFormat(txnId) {
+    const spfxRegex = /^SPFX\d{9,}$/;
+    return spfxRegex.test(txnId);
+}
+
+// Show notification
+function showNotification(message, type) {
+    // Remove existing notification
+    const existingNotification = document.getElementById('custom-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.id = 'custom-notification';
+    notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(-20px)';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const amount = document.getElementById('id_amount').value;
+    const name = document.getElementById('id_name').value;
+    const phone = document.getElementById('id_phone').value;
+    const txnId = document.getElementById('id_txn_id').value;
+    const verificationCode = document.getElementById('id_verification_code').value;
+    const flagged = document.getElementById('id_flagged').checked;
+    const flagReason = document.getElementById('id_flag_reason').value;
+    
+    // Basic validation
+    if (!amount || parseFloat(amount) <= 0) {
+        showNotification('Please enter a valid amount greater than 0', 'error');
+        e.preventDefault();
+        return;
+    }
+    
+    if (!name.trim()) {
+        showNotification('Please enter customer name', 'error');
+        e.preventDefault();
+        return;
+    }
+    
+    if (!phone.trim()) {
+        showNotification('Please enter phone number', 'error');
+        e.preventDefault();
+        return;
+    }
+    
+    if (!txnId.trim()) {
+        showNotification('Please enter Transaction ID', 'error');
+        e.preventDefault();
+        return;
+    }
+
+    
+    // Validate verification code format (if provided)
+    if (verificationCode && !/^\d{6}$/.test(verificationCode)) {
+        showNotification('Verification code must be 6 digits', 'error');
+        e.preventDefault();
+        return;
+    }
+    
+    // Check flag reason
+    if (flagged && !flagReason.trim()) {
+        if (!confirm('You have flagged this transaction but provided no reason. Continue anyway?')) {
+            e.preventDefault();
+            return;
+        }
+    }
+    
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating...';
+    }
+});
+
+// Reset form
+function resetForm() {
+    if (confirm('Are you sure you want to reset all fields? Generated IDs will be lost.')) {
+        document.querySelector('form').reset();
+        
+        // Reset balances to 0
+        document.getElementById('id_prev_bal').value = '0.00';
+        document.getElementById('id_new_bal').value = '0.00';
+        
+        // Clear generated values
+        document.getElementById('id_txn_id').value = '';
+        document.getElementById('id_verification_code').value = '';
+        
+        showNotification('Form reset successfully', 'success');
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleFlagReason();
+    
+    
+    
+    const verificationCodeField = document.getElementById('id_verification_code');
+    if (!verificationCodeField.value) {
+        generateVerificationCode();
+    }
+    
+    // Add real-time validation for transaction ID
+    txnIdField.addEventListener('input', function() {
+        if (this.value) {
+            const isValid = validateSPFXFormat(this.value);
+            if (isValid) {
+                this.classList.remove('border-red-300');
+                this.classList.add('border-green-300');
+            } else {
+                this.classList.remove('border-green-300');
+                this.classList.add('border-red-300');
+            }
+        }
+    });
+    
+    // Add real-time validation for verification code
+    verificationCodeField.addEventListener('input', function() {
+        if (this.value) {
+            const isValid = /^\d{0,6}$/.test(this.value);
+            if (isValid) {
+                this.classList.remove('border-red-300');
+                this.classList.add('border-gray-300');
+            } else {
+                this.classList.remove('border-gray-300');
+                this.classList.add('border-red-300');
+            }
+        }
+    });
+});
+</script>
+
+<style>
+/* Custom notification styling */
+#custom-notification {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* SPFX ID validation styling */
+#id_txn_id.valid {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+#id_txn_id.invalid {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Verification code validation */
+#id_verification_code.valid {
+    border-color: #10b981 !important;
+}
+
+#id_verification_code.invalid {
+    border-color: #ef4444 !important;
+}
+
+/* Button hover effects */
+button:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+/* Form field focus effects */
+input:focus, textarea:focus, select:focus {
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+</style>
+{% endblock %}

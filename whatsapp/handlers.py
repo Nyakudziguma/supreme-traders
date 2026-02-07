@@ -1,6 +1,6 @@
 # whatsapp/handlers.py (updated)
 from .services import WhatsAppService
-from .models import WhatsAppSession, InitiateOrders, InitiateSellOrders, Switch
+from .models import WhatsAppSession, InitiateOrders, InitiateSellOrders, Switch, ClientVerification
 from accounts.models import User
 from deriv.models import AuthDetails
 import re
@@ -67,6 +67,34 @@ class MessageHandler:
 
                 self.whatsapp_service.send_deposit_flow(phone_number)
                 self.whatsapp_service.update_session_step(phone_number,"menu", "direct_deposit", conversation_data=None)
+                return
+            
+            elif message and message.lower()=='weltrade_deposit' or selected_id and selected_id=='weltrade_deposit':
+                switch = Switch.objects.filter(transaction_type='weltrade_deposit').first()
+                if not switch or not switch.is_active:
+                    if switch and not switch.is_active:
+                        self.whatsapp_service.send_message(phone_number, switch.off_message
+                    )
+                    return
+
+                if not switch:
+                    self.whatsapp_service.send_message(
+                        phone_number,
+                        "This service is currently unavailable."
+                    )
+                    return
+                verified = ClientVerification.objects.filter(trader=session.user, verified=True).first()
+                if not verified:
+                    message = "🚫 Your account is not yet verified, please verify first before you can proceed"
+                    self.whatsapp_service.send_message(phone_number, message)
+                    self.whatsapp_service.send_verification_flow(phone_number)
+                    return
+                existing_order = InitiateOrders.objects.filter(trader=session.user).first()
+                if existing_order:
+                    existing_order.delete()
+
+                self.whatsapp_service.send_weltrade_flow(phone_number)
+                self.whatsapp_service.update_session_step(phone_number,"menu", "weltrade_deposit", conversation_data=None)
                 return
 
             elif message and message.lower()=='withdraw' or selected_id and selected_id=='withdraw':
@@ -224,11 +252,21 @@ class MessageHandler:
                 self.whatsapp_service.update_session_step(phone_number,"finish_signal_subscription", "complete_signal_subscription")
                 return
 
-            elif session.current_step == 'waiting_for_ecocash_pop':
+            elif session.current_step == 'client_verification_created':
+                self.whatsapp_service.send_message(phone_number,'Your details have been recorded. Our team will be in touch with you!')
+                self.whatsapp_service.update_session_step(phone_number,"menu", "menu")
+                return
+
+            elif session.current_step == 'waiting_for_ecocash_pop' and session.previous_step=='order_creation':
                 order = InitiateOrders.objects.filter(trader=session.user).first()
                 order_amount = order.amount if order else 'an unknown amount'
-                print(" 📩 Processing Ecocash POP for amount:", order_amount)
-                charge = self.whatsapp_service.calculate_charge(order_amount) if order else 0
+                if order.order_type == 'weltrade_deposit' and order.amount<10:
+                    self.whatsapp_service.send_message(phone_number, "The minimum amount for Weltrade | Exness | HFM | USDT | etc is $10")
+                    self.whatsapp_service.send_weltrade_flow(phone_number)
+                    return
+                
+                print(" 📩 Processing Ecocash POP for amount:", order_amount, order.order_type)
+                charge = self.whatsapp_service.calculate_charge(order_amount, order.order_type) if order else 0
                 total_amount = round(order_amount + charge, 2) if order else 0
 
                 message = f"Great! Here's your paymnent summary. *Check Total \n\n Deposit Amount:* ${order_amount}\n\n*Total To Pay:* ${total_amount}\n\n Payment Code: \n *153 * 3 * 1 * 064550 * Amount #\nName: Tashinga \n\nPay exact total or funds won't reflect. \n\n⚠️  Please note: \n\n*Third party payments are NOT allowed.*\n\nOnly send from the same Ecocash number you provided. \n*_Once you have made the payment, upload the a screeshot of the transaction by clicking the upload pop button below._*"
@@ -236,9 +274,13 @@ class MessageHandler:
                 self.whatsapp_service.send_message_pop_flow(phone_number, message)
                 self.whatsapp_service.update_session_step(phone_number,"waiting_for_ecocash_pop", "finish_order_creation", conversation_data=None)
                 return
-
+        
             elif session.current_step == 'finish_order_creation':
-                self.whatsapp_service.create_deposit_transaction(phone_number)
+                order = InitiateOrders.objects.filter(trader=session.user).first()
+                if order.order_type=='deposit':
+                    self.whatsapp_service.create_deposit_transaction(phone_number)
+                elif order.order_type=='weltrade_deposit':
+                    self.whatsapp_service.create_weltrade_transaction(phone_number)
                 self.whatsapp_service.update_session_step(phone_number,"finish_order_creation", "complete_deposit_order", conversation_data=None)
                 return
 

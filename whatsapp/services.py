@@ -66,6 +66,14 @@ class WhatsAppService:
                                         {
                                             "id": "deriv_deposit",
                                             "title": "💸 Deriv Deposits",
+                                            "description": "Minimum $1"
+
+                                            
+                                        },
+                                         {
+                                            "id": "weltrade_deposit",
+                                            "title": "🏦 Other Brokers",
+                                            "description": "Minimum $10 | Weltrade | Exness | HFM | USDT"
                                         },
                                         {
                                             "id": "withdraw",
@@ -576,9 +584,9 @@ class WhatsAppService:
                 session.conversation_data.update(conversation_data)
             session.save()
     
-    def calculate_charge(self, amount):
+    def calculate_charge(self, amount, transaction_type):
         """Calculate transaction charge for given amount"""
-        return TransactionCharge.get_charge_for_amount(Decimal(str(amount)))
+        return TransactionCharge.get_charge_for_amount(Decimal(str(amount)), transaction_type)
     
     def extract_txn_id(message):
         # Case 1: Full txn_id from message (e.g., "Txn ID: CO250714.1806.F08137")
@@ -650,6 +658,88 @@ class WhatsAppService:
                 "flow_token": f"{phone_number}",
                 "flow_id": "1191417283184526",
                 "flow_cta": "DIRECT DEPOSIT",
+                "flow_action": "navigate",
+                "flow_action_payload": {
+                "screen": "DETAILS",
+                "data": {
+                    "account_number": "account_number",
+                }
+                }
+            }
+            }
+            }
+         }
+
+        response = requests.post(self.api_url, headers=headers, json=payload)
+    
+    def send_verification_flow(self, phone_number):
+        headers = {"Authorization": self.api_token}
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_number,
+            "type": "interactive",
+            "interactive" : {
+            "type": "flow",
+            "header": {
+            "type": "text",
+            "text": "Client Verification"
+            },
+            "body": {
+            "text": "Great! Let's verify your account. Click the verify button below to proceed."
+            },
+            "footer": {
+            "text": "#supreme #instant #secure"
+            },
+            "action": {
+            "name": "flow",
+            "parameters": {
+                "flow_message_version": "3",
+                "flow_token": f"{phone_number}",
+                "flow_id": "1197057282558495",
+                "flow_cta": "VERIFY",
+                "flow_action": "navigate",
+                "flow_action_payload": {
+                "screen": "CLIENT_VERIFICATION",
+                "data": {
+                    "name": "name",
+                }
+                }
+            }
+            }
+            }
+         }
+
+        response = requests.post(self.api_url, headers=headers, json=payload)
+        ans = response.json()
+        print(ans)
+    
+    def send_weltrade_flow(self, phone_number):
+        headers = {"Authorization": self.api_token}
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_number,
+            "type": "interactive",
+            "interactive" : {
+            "type": "flow",
+            "header": {
+            "type": "text",
+            "text": "DIRECT DEPOSIT"
+            },
+            "body": {
+            "text": "Great! Let's process your other broker deposit. Click the deposit button below to proceed."
+            },
+            "footer": {
+            "text": "#supreme #instant #secure"
+            },
+            "action": {
+            "name": "flow",
+            "parameters": {
+                "flow_message_version": "3",
+                "flow_token": f"{phone_number}",
+                "flow_id": "1214094713601299",
+                "flow_cta": "DEPOSIT",
                 "flow_action": "navigate",
                 "flow_action_payload": {
                 "screen": "DETAILS",
@@ -956,7 +1046,7 @@ class WhatsAppService:
                         return
                     
                     # Calculate net amount and charge correctly
-                    net_amount, charge = self._calculate_net_amount_and_charge(total_amount)
+                    net_amount, charge = self._calculate_net_amount_and_charge(total_amount,order.order_type)
                     
                     print(f"Total received: ${total_amount}")
                     print(f"Net amount (to Deriv): ${net_amount}")
@@ -1042,39 +1132,264 @@ class WhatsAppService:
         except User.DoesNotExist:
             message = "Trader account not found. Please contact support."
             return self.send_message(fromId, message)
-
-    def _calculate_net_amount_and_charge(self, total_amount):
-
+    
+    def create_weltrade_transaction(self, fromId):
+        """Create a deposit transaction using unified extraction service."""
         try:
-            # First, check which charge range would apply
+            order = InitiateOrders.objects.get(trader__phone_number=fromId)
+            trader = User.objects.get(phone_number=fromId)
+            account_number = order.account_number
+            ecocash_number = order.ecocash_number
+
+            # Get the stored EcoCash POP if exists
+            message_text=None
+            try:
+                ecocash_pop = EcocashPop.objects.get(order=order)
+                if ecocash_pop.has_image:
+                    image_file = ecocash_pop.ecocash_pop.path
+                    has_image = True
+                else:
+                    message_text = ecocash_pop.ecocash_message
+                    has_image = False
+            except EcocashPop.DoesNotExist:
+                image_file = None
+                has_image = False
+            
+            # Use unified extraction service
+            if has_image and message_text:
+                # If we have both image and text, try both
+                pop = self.ocr_service.extract_from_any_source(
+                    image_file=image_file,
+                    message=message_text
+                )
+            elif has_image:
+                # Only image available
+                pop = self.ocr_service.extract_from_any_source(image_file=image_file)
+            elif message_text:
+                # Only text message available
+                pop = self.ocr_service.extract_from_any_source(message=message_text)
+            else:
+                # No image or text provided
+                self.send_message_pop_flow(fromId, "❌ Please send either an EcoCash POP image or the transaction message text.")
+                return
+            
+            # Check for extraction errors
+            if 'error' in pop:
+                error_msg = pop.get('error', 'Unknown error')
+                if has_image:
+                    self.send_message_pop_flow(fromId, f"❌ Extraction Error: {error_msg}\n\nPlease send the text cashout message instead.")
+                else:
+                    self.send_message_pop_flow(fromId, f"❌ Extraction Error: {error_msg}\n\nPlease resend the ecocash transaction message.")
+                
+                # Clean up if we created a pop object
+                if has_image:
+                    ecocash_pop.delete()
+                return
+            
+            # Extract transaction details
+            extracted_reference = pop.get('transaction_details', {}).get('reference')
+            total_received_amount = pop.get('transaction_details', {}).get('amount')
+            extraction_source = pop.get('source', 'unknown')
+
+            print(f"Extracted txn_id: {extracted_reference} and amount: {total_received_amount} from {extraction_source}.")
+
+            if not extracted_reference:
+                message = (
+                    f"We couldn't extract a valid Transaction ID from your {extraction_source}. "
+                    f"Please resend the full EcoCash message.\n\n"
+                    f"Extraction source: {extraction_source}"
+                )
+                self.send_message_pop_flow(fromId, message)
+                if has_image:
+                    ecocash_pop.delete()
+                return
+            
+            
+            # Normalize phone number for lookup
+            normalized_phone = ecocash_number.lstrip('0')
+            if normalized_phone.startswith('263'):
+                normalized_phone = normalized_phone[3:]
+            
+            # Look for matching cashout transaction
+            cashout = CashOutTransaction.objects.filter(
+                phone__in=[ecocash_number, normalized_phone, '0' + normalized_phone, 
+                        '263' + normalized_phone, '+263' + normalized_phone],
+                txn_id=extracted_reference
+            ).first()
+            
+            # Try partial match if exact not found
+            if not cashout:
+                cashout = CashOutTransaction.objects.filter(
+                    phone=ecocash_number, 
+                    txn_id__endswith=extracted_reference
+                ).first()
+                print("Partial match cashout:", cashout)
+
+            if cashout:
+                if cashout.completed:
+                    try:
+                        txn = EcoCashTransaction.objects.get(
+                            ecocash_number=ecocash_number,
+                            ecocash_reference=cashout.txn_id,
+                            status='completed'
+                        )
+                        credited_account = txn.deriv_account_number[:2] + '****' + txn.deriv_account_number[-3:]
+                        message = (
+                            f"Ooops! Sorry!\n\nThis transaction was already redeemed and credited to Weltrade account: "
+                            f"`{credited_account}`.\n\nIf you would like more information, please feel free to contact support.\n\nThank you!"
+                        )
+                        self.update_session_step(fromId, "finish_order_creation", "menu", conversation_data=None)
+                        self.send_message(fromId, message)
+                        return
+                    except EcoCashTransaction.DoesNotExist:
+                        message = (
+                            "Your transaction was marked completed, but we could not find the credited account details. "
+                            "Please contact support."
+                        )
+                    return self.send_message(fromId, message)
+
+                else:
+                    try:
+                        total_amount = Decimal(cashout.amount)
+                    except (ValueError, TypeError, InvalidOperation):
+                        self.send_message(fromId, f"Failed to get the transaction amount from {extraction_source}. Please contact support.")
+                        return
+                    
+                    # Calculate net amount and charge correctly
+                    charges = TransactionCharge.objects.filter(transaction_type='weltrade_deposit')
+                    net = total_amount
+                    net_amount, charge = self._calculate_net_amount_and_charge(total_amount,order.order_type) 
+                    
+                    print(f"Total received: ${total_amount}")
+                    print(f"Net amount (to Weltrade): ${net_amount}")
+                    print(f"Transaction charge: ${charge}")
+                    
+                    # Validate the calculation
+                    if abs((net_amount + charge) - total_amount) > Decimal('0.01'):
+                        self.send_message(fromId, "Amount calculation error. Please contact support.")
+                        return
+                    
+                    cashout.trader = trader
+                    cashout.save()
+                    
+                    # Create the EcoCashTransaction with NET amount
+                    transaction = EcoCashTransaction.objects.create(
+                        user=trader,
+                        transaction_type='weltrade_deposit',
+                        amount=net_amount,  # This is the amount that goes to Deriv
+                        deriv_account_number=account_number,
+                        ecocash_number=ecocash_number,
+                        ecocash_name=cashout.name,
+                        reference_number=f"WT{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                        ecocash_reference=extracted_reference,
+                        charge=charge,  
+                        currency='USD',
+                        status='processing',  
+                    )
+                    
+                    # Create receipt only if we have an image
+                    if has_image:
+                        receipt = TransactionReceipt.objects.create(
+                            transaction=transaction,
+                            receipt_image=image_file,
+                            uploaded_by=trader,
+                            verified=True,
+                            verified_at=datetime.now(),
+                            verification_notes=f"Auto-verified via {extraction_source}."
+                        )
+                    else:
+                        # Create receipt without image
+                        receipt = TransactionReceipt.objects.create(
+                            transaction=transaction,
+                            uploaded_by=trader,
+                            verified=True,
+                            verified_at=datetime.now(),
+                            verification_notes=f"Auto-verified via text message {extraction_source}."
+                        )
+                    
+                    self.send_message(fromId, f"_*Processing your payment...*_")
+                    
+                    # Send acknowledgment message
+                    source_msg = "POP image" if extraction_source == 'ocr' else "text message"
+                    ack_message = (
+                        f"✅ Transaction details extracted successfully from {source_msg}!\n\n"
+                        f"• Amount: ${float(total_amount):.2f}\n"
+                        f"• Transaction ID: {extracted_reference}\n"
+                        f"• Net deposit: ${float(net_amount+1):.2f}\n"
+                        f"• Charge: ${float(charge):.2f}\n\n"
+                        f"Processing your deposit to account: {account_number}..."
+                    )
+                    self.send_message(fromId, ack_message)
+                    
+                    # Now process the deposit using DerivPaymentAgent
+                    return self._process_weltrade_payment(transaction, cashout, order, trader)
+            else:
+                message = (
+                    f"We could not find a matching EcoCash transaction for the ID you provided.\n\n"
+                    f"Extracted from: {extraction_source}\n"
+                    f"Transaction ID: {extracted_reference}\n"
+                    f"Phone: {ecocash_number}\n\n"
+                    f"Please resend the full message or confirm your transaction details."
+                )
+                self.send_pop_flow(fromId, message)
+                if has_image:
+                    ecocash_pop.delete()
+                return
+
+        except InitiateOrders.DoesNotExist:
+            message = "Sorry! Your order could not be found. Please start again or contact support."
+            self.send_deposit_flow(fromId, message)
+            if has_image:
+                ecocash_pop.delete()
+        except User.DoesNotExist:
+            message = "Trader account not found. Please contact support."
+            return self.send_message(fromId, message)
+
+
+    def _calculate_net_amount_and_charge(self, total_amount, order_type):
+        print("Deriv order type.......", order_type)
+
+        if order_type == 'withdrawal':
+            # For withdrawals: total_amount = net_amount (no charge)
+            return total_amount.quantize(Decimal('0.01')), Decimal('0.00')
+        
+        try:
+            # Only process charges for deposit types
+            if order_type not in ['deposit', 'weltrade_deposit']:
+                # Default to deposit if invalid type
+                order_type = 'deposit'
+            
+            # First, check which charge range would apply FOR THIS DEPOSIT TYPE
             charge_table = TransactionCharge.objects.filter(
+                transaction_type=order_type,  # Only for deposit types
                 is_active=True
             ).order_by('min_amount')
             
-            applicable_charge = None
             for charge_config in charge_table:
-               
                 if charge_config.is_percentage:
-                   
+                    # For percentage-based charges: total = net + (net * percentage_rate/100) + additional_fee
                     percentage_decimal = charge_config.percentage_rate / Decimal('100')
                     net_amount = (total_amount - charge_config.additional_fee) / (Decimal('1') + percentage_decimal)
                     
-                    if charge_config.min_amount <= net_amount <= charge_config.max_amount:
+                    # Check if net_amount falls in this percentage range
+                    if net_amount >= charge_config.min_amount:
+                        # For percentage ranges, max_amount is usually very large
                         charge = total_amount - net_amount
                         return net_amount.quantize(Decimal('0.01')), charge.quantize(Decimal('0.01'))
                 else:
-                   
+                    # For fixed charges: total = net + fixed_charge
                     net_amount = total_amount - charge_config.fixed_charge
                     
-                    # Check if net_amount falls in this range
+                    # Check if net_amount falls in this fixed range
                     if charge_config.min_amount <= net_amount <= charge_config.max_amount:
                         charge = charge_config.fixed_charge
                         return net_amount.quantize(Decimal('0.01')), charge.quantize(Decimal('0.01'))
             
-            # If no range matched, use the highest percentage range as fallback
+            # If no range matched, use the highest percentage range for this deposit type
             highest_percentage = TransactionCharge.objects.filter(
                 is_percentage=True,
-                is_active=True
+                is_active=True,
+                transaction_type=order_type
             ).order_by('-min_amount').first()
             
             if highest_percentage:
@@ -1086,7 +1401,8 @@ class WhatsAppService:
         except Exception as e:
             print(f"Error calculating net amount: {e}")
         
-        # Fallback: use 10% + 0.9 as default
+        # Fallback for deposits: use 10% + 0.9 as default
+        # WITHDRAWALS ALREADY HANDLED ABOVE - NO CHARGES
         net_amount = (total_amount - Decimal('0.90')) / Decimal('1.10')
         charge = total_amount - net_amount
         return net_amount.quantize(Decimal('0.01')), charge.quantize(Decimal('0.01'))
@@ -1144,6 +1460,159 @@ class WhatsAppService:
             print(f"Error processing deposit: {e}")
             error_msg = f"⚠️ Error processing transaction: {str(e)}"
             self._handle_transaction_failure(transaction, trader, str(e), error_msg)
+    
+    def _process_weltrade_payment(self, transaction, cashout, order, trader):
+        from weltrade.services.services import perform_weltrade_withdrawal, WeltradeWithdrawalError
+        
+        net_amount = transaction.amount 
+        
+        try:
+            if not transaction.deriv_account_number or not transaction.deriv_account_number.strip():
+                error_msg = "⚠️ Invalid wallet address. Please provide a valid TRC20 wallet address."
+                self._handle_transaction_failure(transaction, trader, "Missing wallet address", error_msg)
+                return
+            
+            try:
+                amount_decimal = Decimal(str(net_amount)) + Decimal('1')
+
+                # Call Weltrade withdrawal service
+                withdraw_order_id, binance_response = perform_weltrade_withdrawal(
+                    address=transaction.deriv_account_number.strip(),
+                    amount=amount_decimal
+                )
+                
+                # ✅ Transfer successful
+                self._handle_weltrade_success(
+                    transaction, cashout, withdraw_order_id, 
+                    binance_response, net_amount
+                )
+                
+            except WeltradeWithdrawalError as e:
+                # Handle specific Weltrade/Binance errors
+                self._handle_weltrade_withdrawal_error(transaction, e, trader)
+                return
+                
+        except Exception as e:
+            print(f"Error processing Weltrade deposit: {e}")
+            error_msg = f"⚠️ Error processing transaction: {str(e)}"
+            self._handle_transaction_failure(transaction, trader, str(e), error_msg)
+
+    def _handle_weltrade_success(self, transaction, cashout, withdraw_order_id, 
+                            binance_response, net_amount):
+        """Handle successful Weltrade withdrawal."""
+        # Mark cashout as completed
+        cashout.completed = True
+        cashout.save()
+        
+        # Update EcoCashTransaction with success
+        transaction.mark_deposit_completed(
+            deriv_transaction_id=withdraw_order_id,
+            notes=f"Deposit completed via Binance withdrawal to Weltrade. Response: {binance_response}"
+        )
+        
+        # Extract wallet address (obfuscated for security)
+        wallet_address = transaction.deriv_account_number.strip()
+        obfuscated_wallet = self._obfuscate_wallet_address(wallet_address)
+        
+        # Send success message
+        message = (
+            "⏱️ Processing Time: 1–5 Minutes\n\n"
+            "Transaction Successful! ✅\n\n"
+            "Funds have been sent to your Wallet .\n\n"
+            f"🔹 *Amount Sent:* `${float(net_amount):.2f}`\n"
+            f"🔹 *Transaction ID:* `{withdraw_order_id}`\n"
+            f"🔹 *Wallet Address:* `{obfuscated_wallet}`\n"
+            f"🔹 *Network:* TRC20 (USDT)\n\n"
+            "Please allow 1 to 5 minutes for the funds to reflect in your wallet account.\n"
+            "For any assistance, kindly contact our support team.\n\n"
+            "Thank you for choosing us!"
+        )
+        
+        self.send_message(transaction.user.phone_number, message)
+        
+        # Check for switch settings
+        from .models import Switch
+        try:
+            switch = Switch.objects.get(transaction_type='weltrade_deposit')
+            if switch and switch.on_message:
+                self.home_button(transaction.user.phone_number, switch.on_message)
+        except Switch.DoesNotExist:
+            pass
+
+    def _handle_weltrade_withdrawal_error(self, transaction, error, trader):
+        """Handle Weltrade withdrawal errors."""
+        error_message = "⚠️ Withdrawal failed. Please contact support."
+        
+        # Check for specific Binance error messages
+        error_payload = getattr(error, 'payload', {})
+        error_msg_lower = str(error).lower()
+        
+        # Common Binance errors
+        if "insufficient balance" in error_msg_lower:
+            error_message = (
+                "⚠️ Service temporarily unavailable due to insufficient balance.\n"
+                "Please try again later or contact support."
+            )
+        elif "invalid address" in error_msg_lower or "address" in error_msg_lower:
+            error_message = (
+                "⚠️ Invalid wallet address.\n"
+                "Please ensure you provided a valid TRC20 (TRON) USDT wallet address.\n"
+                "Contact support if you need assistance."
+            )
+        elif "minimum withdrawal" in error_msg_lower:
+            error_message = (
+                "⚠️ Amount below minimum withdrawal limit.\n"
+                "Please check the minimum withdrawal amount and try again."
+            )
+        elif "daily limit" in error_msg_lower or "withdrawal limit" in error_msg_lower:
+            error_message = (
+                "⚠️ Daily withdrawal limit exceeded.\n"
+                "Please try again tomorrow or contact support."
+            )
+        elif "network" in error_msg_lower:
+            error_message = (
+                "⚠️ Network error.\n"
+                "Please ensure you're using TRC20 network for USDT withdrawals."
+            )
+        
+        # Check if there's a specific message in the payload
+        if isinstance(error_payload, dict):
+            if 'msg' in error_payload:
+                error_details = error_payload['msg']
+            elif 'message' in error_payload:
+                error_details = error_payload['message']
+            else:
+                error_details = str(error_payload)
+        else:
+            error_details = str(error_payload)
+        
+        # Log the error details for debugging
+        print(f"Weltrade withdrawal error: {error_details}")
+        
+        # Send error message to user
+        self.home_button(transaction.user.phone_number, error_message)
+        
+        # Mark transaction as failed
+        transaction.mark_failed(
+            reason=f"Weltrade withdrawal failed: {error_details}"
+        )
+
+    def _obfuscate_wallet_address(self, address):
+        """Obfuscate wallet address for display (first 6 and last 4 chars)."""
+        if len(address) <= 10:
+            return address
+        return f"{address[:6]}...{address[-4:]}"
+
+    def _handle_transaction_failure(self, transaction, trader, error_details, user_message):
+        """Generic handler for transaction failures."""
+        # Send error message to user
+        self.home_button(transaction.user.phone_number, user_message)
+        
+        # Mark transaction as failed
+        transaction.mark_failed(reason=error_details)
+        
+        # Log the error
+        print(f"Transaction failed for {transaction.user.phone_number}: {error_details}")
 
     def _process_transfer(self, deriv_agent, net_amount, transaction, cashout, details_result, deriv_name):
         """Process the actual transfer."""

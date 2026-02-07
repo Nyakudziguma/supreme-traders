@@ -48,11 +48,16 @@ class WhatsAppMessage(models.Model):
         return f"{self.message_type} - {self.message_from} - {self.timestamp}"
 
 class InitiateOrders(models.Model):
+     ORDER_TYPES = (
+        ('deposit', 'Deriv Deposit'),
+        ('weltrade_deposit', 'Weltrade Deposit'),
+     )
      trader = models.ForeignKey(User, on_delete=models.CASCADE)
      amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
      ecocash_number = models.CharField(max_length=15)
      txn_Id = models.CharField(max_length=100, blank=True, null=True)
-     account_number = models.CharField(max_length=50)
+     account_number = models.CharField(max_length=100)
+     order_type = models.CharField(max_length=50, choices=ORDER_TYPES, default='deposit')
 
      def __str__(self):
             return self.account_number
@@ -82,12 +87,14 @@ class EcocashPop(models.Model):
 from django.core.exceptions import ValidationError
 
 class ClientVerification(models.Model):
+    trader = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=255)
     ecocash_number = models.CharField(max_length=20, unique=True)
 
     national_id_image = models.ImageField(upload_to='clients/ids/', blank=True, null=True)
     selfie_with_id = models.ImageField(upload_to='clients/selfies/', blank=True, null=True)
-
+    crypto_wallet_address = models.CharField(max_length=255, blank=True, null=True)
+    rejected = models.BooleanField(default=False)
     verified = models.BooleanField(default=False)
     verified_by = models.ForeignKey(
         User,
@@ -98,6 +105,7 @@ class ClientVerification(models.Model):
         related_name='verified_clients'
     )
     verified_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -175,6 +183,7 @@ class Switch(models.Model):
         ('signals', 'Signals'),
         ('books', 'Books'),
         ('training', 'Training'),
+        ('weltrade_deposit', 'Weltrade Deposit'),
         ('other', 'Other'),
     )
     transaction_type = models.CharField(max_length=50, choices=Transaction_Types)
