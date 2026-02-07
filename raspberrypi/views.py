@@ -61,90 +61,192 @@ def receive_message(request):
 
         # Only handle Ecocash messages
         if sender == "#2236333136343553544":
-            # Handle CashOut confirmation
-            if "Ecocash: CashOut Confirmation" in message:
-                # Try to match the complete pattern first
-                full_pattern = r"USD\s+([\d\.]+)\s+transfered\s+from\s+(.+?),(\d+).*?Txn ID\s*:(\S+).*?New Wallet balance:\s*USD\s*([\d\.]+)"
-                match = re.search(full_pattern, message, re.IGNORECASE)
+            # Handle CashOut confirmation - ALL FORMATS
+            if ("Ecocash: CashOut Confirmation" in message or 
+                "Diaspora Funds Cash-out" in message or
+                "Ecocash CashOut Confirmation:" in message):
+                # Try to match the complete pattern for ALL formats
+                full_patterns = [
+                    # Original format: "Ecocash: CashOut Confirmation"
+                    r"USD\s+([\d\.]+)\s+transfered\s+from\s+(.+?),(\d+).*?Txn ID\s*:(\S+).*?New Wallet balance:\s*USD\s*([\d\.]+)",
+                    # New format: "Diaspora Funds Cash-out"
+                    r"USD\s+([\d\.]+)\s+Diaspora Funds Cash-out from\s+(.+?),(\d+)\s+is successful.*?Txn ID\s*:(\S+).*?New Wallet balance:\s*USD\s*([\d\.]+)",
+                    # LATEST format: "Ecocash CashOut Confirmation: USD 0.10 transfered from 771542944 - TATENDA NYAKUDZIGUM was successful. Txn ID: CO260125.1155.T9053599"
+                    r"Ecocash CashOut Confirmation:\s*USD\s*([\d\.]+)\s+transfered from\s+(\d+)\s*-\s*(.+?)\s+was successful\.\s*Txn ID\s*:\s*(\S+)"
+                ]
+                
+                match = None
+                pattern_index = -1
+                for i, pattern in enumerate(full_patterns):
+                    match = re.search(pattern, message, re.IGNORECASE | re.DOTALL)
+                    if match:
+                        print(f"Matched pattern {i}: {pattern}")
+                        pattern_index = i
+                        break
 
                 if match:
-                    print("Matched complete CashOut message with balance")
-                    # Complete message with balance
-                    amount = Decimal(match.group(1).strip().rstrip("."))
-                    name = match.group(2).strip()
-                    phone_raw = match.group(3).strip()
-                    phone = normalize_phone(phone_raw)
-                    txn_id = match.group(4).strip().rstrip(".")
-                    new_bal = Decimal(match.group(5).strip().rstrip("."))
+                    print("Matched complete CashOut message")
+                    print(f"Pattern index: {pattern_index}, Number of groups: {len(match.groups())}")
                     
-                    # Get previous balance (from non-flagged transactions)
-                    last_txn = CashOutTransaction.objects.filter(flagged=False).order_by("-timestamp").first()
-                    prev_bal = last_txn.new_bal if last_txn else Decimal("0.00")
-                    
-                    # Business rules
-                    low_limit = amount < Decimal("1.5")
-                    flagged = False
-                    flag_reason = None
-                    flagged_by = None
-                    
-                    if abs((new_bal - amount) - prev_bal) > Decimal("0.01"):
-                        flagged = True
-                        flag_reason = "Suspicious transaction"
-                        flagged_by = "System"
-                    
-                    # Save transaction
-                    txn = CashOutTransaction.objects.create(
-                        amount=str(amount),
-                        name=name,
-                        phone=phone,
-                        txn_id=txn_id,
-                        body=message,
-                        prev_bal=prev_bal,
-                        new_bal=new_bal,
-                        low_limit=low_limit,
-                        flagged=flagged,
-                        flag_reason=flag_reason,
-                        flagged_by=flagged_by,
-                    )
-                    
-                    # Update Agent balance for CashOut (add amount)
-                    if not flagged:
-                        try:
-                            agent_balance = Balance.objects.get(name="Agent")
-                            agent_balance.balance = agent_balance.balance + amount
-                            agent_balance.save()
-                        except Balance.DoesNotExist:
-                            Balance.objects.create(name="Agent", balance=amount)
-                    
-                    return Response(
-                        {"message": "CashOut transaction saved", "txn_id": txn.txn_id},
-                        status=status.HTTP_201_CREATED,
-                    )
+                    # Extract details based on which pattern matched
+                    if pattern_index == 2:  # Newest format (index 2, 4 groups)
+                        amount = Decimal(match.group(1).strip().rstrip("."))
+                        phone_raw = match.group(2).strip()
+                        name = match.group(3).strip()
+                        txn_id = match.group(4).strip().rstrip(".")
+                        phone = normalize_phone(phone_raw)
+                        
+                        # Newest format doesn't include balance in the message
+                        print(f"Newest format detected - Amount: {amount}, Name: {name}, Phone: {phone}, TxnID: {txn_id}")
+                        
+                        # Get previous balance (from non-flagged transactions)
+                        last_txn = CashOutTransaction.objects.filter(flagged=False).order_by("-timestamp").first()
+                        prev_bal = last_txn.new_bal if last_txn else Decimal("0.00")
+                        
+                        # Business rules
+                        low_limit = amount < Decimal("1.5")
+                        
+                        # Save as incomplete transaction (no balance yet)
+                        txn = CashOutTransaction.objects.create(
+                            amount=str(amount),
+                            name=name,
+                            phone=phone,
+                            txn_id=txn_id,
+                            body=message,
+                            prev_bal=prev_bal,
+                            new_bal=prev_bal,  # Use previous balance as placeholder
+                            low_limit=low_limit,
+                            flagged=True,
+                            flag_reason="Incomplete - waiting for balance",
+                            flagged_by="System",
+                        )
+                        
+                        print(f"Created incomplete transaction for newest format: {txn.txn_id}")
+                        
+                        return Response(
+                            {"message": "CashOut transaction saved (waiting for balance)", "txn_id": txn.txn_id},
+                            status=status.HTTP_201_CREATED,
+                        )
+                    else:
+                        # Original formats with balance (5 groups) - pattern_index 0 or 1
+                        amount = Decimal(match.group(1).strip().rstrip("."))
+                        name = match.group(2).strip()
+                        phone_raw = match.group(3).strip()
+                        phone = normalize_phone(phone_raw)
+                        txn_id = match.group(4).strip().rstrip(".")
+                        new_bal = Decimal(match.group(5).strip().rstrip("."))
+                        
+                        print(f"Original format detected - Amount: {amount}, Name: {name}, Phone: {phone}, TxnID: {txn_id}, Balance: {new_bal}")
+                        
+                        # Get previous balance (from non-flagged transactions)
+                        last_txn = CashOutTransaction.objects.filter(flagged=False).order_by("-timestamp").first()
+                        prev_bal = last_txn.new_bal if last_txn else Decimal("0.00")
+                        
+                        # Business rules
+                        low_limit = amount < Decimal("1.5")
+                        flagged = False
+                        flag_reason = None
+                        flagged_by = None
+                        
+                        if abs((new_bal - amount) - prev_bal) > Decimal("0.01"):
+                            flagged = True
+                            flag_reason = "Suspicious transaction"
+                            flagged_by = "System"
+                        
+                        # Save transaction
+                        txn = CashOutTransaction.objects.create(
+                            amount=str(amount),
+                            name=name,
+                            phone=phone,
+                            txn_id=txn_id,
+                            body=message,
+                            prev_bal=prev_bal,
+                            new_bal=new_bal,
+                            low_limit=low_limit,
+                            flagged=flagged,
+                            flag_reason=flag_reason,
+                            flagged_by=flagged_by,
+                        )
+                        
+                        # Update Agent balance for CashOut (add amount)
+                        if not flagged:
+                            try:
+                                agent_balance = Balance.objects.get(name="Agent")
+                                agent_balance.balance = agent_balance.balance + amount
+                                agent_balance.save()
+                            except Balance.DoesNotExist:
+                                Balance.objects.create(name="Agent", balance=amount)
+                        
+                        return Response(
+                            {"message": "CashOut transaction saved", "txn_id": txn.txn_id},
+                            status=status.HTTP_201_CREATED,
+                        )
                 else:
-                    # Incomplete message - try to extract as much information as possible
-                    # Pattern for amount, name, and phone
-                    basic_pattern = r"USD\s+([\d\.]+)\s+transfered\s+from\s+(.+?),(\d+)"
-                    basic_match = re.search(basic_pattern, message, re.IGNORECASE)
+                    # Incomplete message - try to extract as much information as possible for ALL formats
+                    # Pattern for amount, name, and phone for ALL formats
+                    basic_patterns = [
+                        # Original format
+                        r"USD\s+([\d\.]+)\s+transfered\s+from\s+(.+?),(\d+)",
+                        # New format
+                        r"USD\s+([\d\.]+)\s+Diaspora Funds Cash-out from\s+(.+?),(\d+)",
+                        # LATEST format
+                        r"Ecocash CashOut Confirmation:\s*USD\s*([\d\.]+)\s+transfered from\s+(\d+)\s*-\s*(.+)"
+                    ]
+                    
+                    basic_match = None
+                    basic_pattern_index = -1
+                    for i, pattern in enumerate(basic_patterns):
+                        basic_match = re.search(pattern, message, re.IGNORECASE)
+                        if basic_match:
+                            print(f"Matched basic pattern {i}: {pattern}")
+                            basic_pattern_index = i
+                            break
                     
                     if basic_match:
                         amount = Decimal(basic_match.group(1).strip().rstrip("."))
-                        name = basic_match.group(2).strip()
-                        phone_raw = basic_match.group(3).strip()
-                        phone = normalize_phone(phone_raw)
+                        
+                        # Determine which pattern matched to extract name and phone correctly
+                        if basic_pattern_index == 2:  # Latest format
+                            phone_raw = basic_match.group(2).strip()
+                            name_part = basic_match.group(3).strip()
+                            phone = normalize_phone(phone_raw)
+                            
+                            # Clean up name if it contains "was successful" or transaction ID
+                            if "was successful" in name_part:
+                                name = name_part.split("was successful")[0].strip()
+                            elif "Txn ID" in name_part:
+                                name = name_part.split("Txn ID")[0].strip()
+                            else:
+                                name = name_part
+                        else:
+                            # Original formats (index 0 or 1)
+                            name = basic_match.group(2).strip()
+                            phone_raw = basic_match.group(3).strip()
+                            phone = normalize_phone(phone_raw)
                         
                         # Try to extract transaction ID if present
-                        txn_id_pattern = r"Txn ID\s*:(\S+)"
+                        txn_id_pattern = r"Txn ID\s*:\s*(\S+)"
                         txn_id_match = re.search(txn_id_pattern, message, re.IGNORECASE)
                         txn_id = txn_id_match.group(1).strip().rstrip(".") if txn_id_match else "PENDING"
                         
                         # Try to extract balance if present
-                        balance_pattern = r"New Wallet balance:\s*USD\s*([\d\.]+)"
-                        balance_match = re.search(balance_pattern, message, re.IGNORECASE)
+                        balance_patterns = [
+                            r"New wallet balance:\s*USD\s*([\d\.]+)",  # New format: "New wallet balance:"
+                            r"New Wallet balance:\s*USD\s*([\d\.]+)"   # Old format: "New Wallet balance:"
+                        ]
+                        
+                        balance_match = None
+                        for pattern in balance_patterns:
+                            balance_match = re.search(pattern, message, re.IGNORECASE)
+                            if balance_match:
+                                break
                         
                         # Check for various partial balance patterns
                         partial_patterns = [
-                            r"New Wallet balance:\s*USD\s*$",  # Ends with "New Wallet balance: USD"
-                            r"New Wallet balance:\s*$",        # Ends with "New Wallet balance:"
+                            r"New wallet balance:\s*USD\s*$",  # Ends with "New wallet balance: USD"
+                            r"New wallet balance:\s*$",        # Ends with "New wallet balance:"
+                            r"New Wallet balance:\s*USD\s*$",  # OLD format: Ends with "New Wallet balance: USD"
+                            r"New Wallet balance:\s*$",        # OLD format: Ends with "New Wallet balance:"
                             r"New Wallet\s*$",                # Ends with "New Wallet"
                             r"New\s*$"                        # Ends with "New"
                         ]
@@ -254,7 +356,7 @@ def receive_message(request):
                                     status=status.HTTP_201_CREATED,
                                 )
                         elif partial_balance_match:
-                            # We have a partial "New Wallet balance" string but no actual balance
+                            # We have a partial "New wallet balance" string but no actual balance
                             # Save as incomplete and wait for the balance
                             print("Detected partial balance message")
                             
@@ -290,7 +392,7 @@ def receive_message(request):
                                     status=status.HTTP_201_CREATED,
                                 )
                         else:
-                            # Create or update incomplete transaction
+                            # Create or update incomplete transaction (LATEST format doesn't have balance)
                             if existing_txn:
                                 # Update existing transaction with any new info
                                 if txn_id != "PENDING" and existing_txn.txn_id == "PENDING":
@@ -313,7 +415,7 @@ def receive_message(request):
                                     new_bal=prev_bal,  # Use previous balance as placeholder
                                     low_limit=amount < Decimal("1.5"),
                                     flagged=True,
-                                    flag_reason="Incomplete and suspicious Transaction",
+                                    flag_reason="Incomplete - waiting for balance",
                                     flagged_by="System",
                                 )
                                 
@@ -329,7 +431,8 @@ def receive_message(request):
             else:
                 # Enhanced patterns to handle various balance message formats
                 balance_patterns = [
-                    r"^(?:New Wallet balance:\s*USD\s*)?([\d\.]+)\s*\.$",  # Full or just number: "New Wallet balance: USD 212.44." or "212.44."
+                    r"^(?:New wallet balance:\s*USD\s*)?([\d\.]+)\s*\.$",  # NEW format: "New wallet balance: USD 77.58."
+                    r"^(?:New Wallet balance:\s*USD\s*)?([\d\.]+)\s*\.$",  # OLD format: "New Wallet balance: USD 212.44."
                     r"^(?:balance:\s*USD\s*)([\d\.]+)\s*\.$",              # Partial "balance: USD 212.44."
                     r"^(?:USD\s*)([\d\.]+)\s*\.$"                          # Just "USD 212.44."
                 ]
@@ -346,9 +449,17 @@ def receive_message(request):
                         print(f"Matched balance pattern: {pattern} with value: {balance_value}")
                         break
                 
-                # Look for transaction ID fragment
-                txn_id_fragment_pattern = r"^([A-Za-z0-9\.]+)\s*\.\s*New Wallet balance:\s*USD\s*([\d\.]+)\s*\.$"
-                txn_id_fragment_match = re.search(txn_id_fragment_pattern, message)
+                # Look for transaction ID fragment (updated for new format)
+                txn_id_fragment_patterns = [
+                    r"^([A-Za-z0-9\.]+)\s*\.\s*New wallet balance:\s*USD\s*([\d\.]+)\s*\.$",  # NEW format
+                    r"^([A-Za-z0-9\.]+)\s*\.\s*New Wallet balance:\s*USD\s*([\d\.]+)\s*\.$"   # OLD format
+                ]
+                
+                txn_id_fragment_match = None
+                for pattern in txn_id_fragment_patterns:
+                    txn_id_fragment_match = re.search(pattern, message)
+                    if txn_id_fragment_match:
+                        break
                 
                 if balance_match:
                     # This is a balance value (in various formats)
@@ -532,7 +643,7 @@ def receive_message(request):
             {"status": "received", "note": f"error logged: {str(e)}"},
             status=status.HTTP_200_OK,
         )
-        
+       
 # def process_cashout_transaction(amount, name, phone, txn_id, message, new_bal):
 #     """Helper function to process complete CashOut transactions"""
 #     # Get previous balance (default 0 if no transactions yet)

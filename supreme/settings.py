@@ -26,7 +26,7 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['supreme.finpal.co.zw', 'www.supreme.finpal.co.zw']
+ALLOWED_HOSTS = ['henrypatson.finpal.co.zw', 'www.henrypatson.finpal.co.zw']
 
 
 # Application definition
@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'books',
     'marketing',
+    'weltrade',
 
 ]
 
@@ -67,7 +68,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'supreme.urls'
-TOTP_ISSUER = "Supreme AI Trading"
+TOTP_ISSUER = "Henry Patson Trading"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -151,14 +152,14 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/var/www/supreme-traders/media/'
+MEDIA_ROOT = '/var/www/henry/media/'
 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-PASSWORD_RESET_SUBJECT = 'Supreme AI - Password Reset Request'
+PASSWORD_RESET_SUBJECT = 'Henry Patson - Password Reset Request'
 WHATSAPP_URL = config('WHATSAPP_URL')
 WHATSAPP_TOKEN=config('WHATSAPP_TOKEN')
 EMAIL_BACKEND = config('EMAIL_BACKEND')

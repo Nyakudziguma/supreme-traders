@@ -63,7 +63,7 @@ def names_match(name1: str, name2: str) -> bool:
     ratio = SequenceMatcher(None, n1, n2).ratio()
     return ratio >= 0.75  # Allow minor differences (initials, titles, etc.)
 
-def send_sms(ecocash_number, amount, ecocash_name, destination="263788261000"):
+def send_sms(ecocash_number, amount, ecocash_name, destination="263785543725"):
     url = "https://mobile.esolutions.co.zw/bmg/api/single"
     auth = ("CREDSPACEAPI", "wG5PNtxy") 
 
@@ -136,8 +136,8 @@ class DerivPaymentAgent:
     """Class to handle Deriv API operations for payment agent transfers and withdrawals."""
     
     def __init__(self):
-        self.app_id = 115043
-        self.api_token = "ktNM7pwMjvGKtf2"
+        self.app_id = settings.DERIV_APP_ID
+        self.api_token = settings.DERIV_API_TOKEN
         self.whatsapp_number = settings.WHATSAPP_NUMBER
         
         if not self.api_token:
@@ -275,7 +275,7 @@ class DerivPaymentAgent:
                 "paymentagent_withdraw": 1,
                 "amount": float(amount),
                 "currency": "USD",
-                "paymentagent_loginid": 'CR2107637',
+                "paymentagent_loginid": 'CR2763579',
                 "description": f"Withdrawal for {client_loginid}",
                 "verification_code": code,
             }
@@ -392,7 +392,7 @@ class DerivCallbackHandler:
         service = WhatsAppService()
         
         if not code:
-            return HttpResponseRedirect("https://wa.me/message/PEDVFTGBHHP4M1")
+            return HttpResponseRedirect("https://wa.me/message/ITEFIG4OGBIEI1")
         
         try:
             # Get token
@@ -505,7 +505,7 @@ class DerivCallbackHandler:
                                     f"📱 EcoCash Number: {order.ecocash_number}\n"
                                     f"👤 Ecocash Name: {order.ecocash_name}\n"
                                     f"🔖 Reference: {transaction.reference_number}\n\n"
-                                    "Thank you for using Supreme Traders!\n"
+                                    "Thank you for using Henry Patson Payments!\n"
                                     "If you need anything else, type MENU to return to the main menu."
                                 )
                                 service.home_button(trader.phone_number, message)
@@ -575,9 +575,9 @@ class DerivCallbackHandler:
                     return HttpResponseRedirect(f"https://wa.me/{settings.WHATSAPP_NUMBER}?text=Could%20not%20fetch%20client%20details")
                     
             except InitiateSellOrders.DoesNotExist:
-                return HttpResponseRedirect("https://wa.me/message/PEDVFTGBHHP4M1")
+                return HttpResponseRedirect("https://wa.me/message/ITEFIG4OGBIEI1")
             except InitiateSellOrders.MultipleObjectsReturned:
-                return HttpResponseRedirect("https://wa.me/message/6QAX3NYQN3GXA1")
+                return HttpResponseRedirect("https://wa.me/message/I7ZF2KDATFXYG1")
             except Exception as e:
                 message = f"Error processing order: {str(e)}"
                 logger.exception("Order processing error")
@@ -585,9 +585,9 @@ class DerivCallbackHandler:
                 return HttpResponseRedirect(f"https://wa.me/{settings.WHATSAPP_NUMBER}?text={encoded}")
                 
         except AuthDetails.DoesNotExist:
-            return HttpResponseRedirect("https://wa.me/message/PEDVFTGBHHP4M1")
+            return HttpResponseRedirect("https://wa.me/message/ITEFIG4OGBIEI1")
         except AuthDetails.MultipleObjectsReturned:
-            return HttpResponseRedirect("https://wa.me/message/6QAX3NYQN3GXA1")
+            return HttpResponseRedirect("https://wa.me/message/I7ZF2KDATFXYG1")
         except Exception as e:
             message = f"An error occurred while verifying email: {str(e)}"
             logger.exception("Email verification callback error")
@@ -646,9 +646,9 @@ class DerivCallbackHandler:
                 return HttpResponseRedirect(f"https://wa.me/{settings.WHATSAPP_NUMBER}?text={message.replace(' ', '%20')}")
                 
         except InitiateSellOrders.DoesNotExist:
-            return HttpResponseRedirect("https://wa.me/message/PEDVFTGBHHP4M1")
+            return HttpResponseRedirect("https://wa.me/message/ITEFIG4OGBIEI1")
         except InitiateSellOrders.MultipleObjectsReturned:
-            return HttpResponseRedirect("https://wa.me/message/6QAX3NYQN3GXA1")
+            return HttpResponseRedirect("https://wa.me/message/I7ZF2KDATFXYG1")
         except Exception as e:
             message = f"An unexpected error occurred: {str(e)}"
             logger.exception("OAuth callback error")

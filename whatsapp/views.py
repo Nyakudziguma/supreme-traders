@@ -22,7 +22,7 @@ from rest_framework.permissions import AllowAny
 from accounts.models import User
 from pathlib import Path
 from .handlers import MessageHandler
-from .models import InitiateOrders, WhatsAppSession, EcocashPop, InitiateSellOrders
+from .models import InitiateOrders, WhatsAppSession, EcocashPop, InitiateSellOrders, ClientVerification
 import hashlib
 import hmac
 import base64
@@ -32,6 +32,10 @@ from cryptography.hazmat.primitives import padding
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from signals.models import Subscribers
+import re
+from django.utils.text import slugify
+from django.db import IntegrityError
+from .services import WhatsAppService
 
 class WebhookView(APIView): 
     permission_classes = [AllowAny]
@@ -40,7 +44,7 @@ class WebhookView(APIView):
         data = json.loads(request.body)
         print(f"{data}")
         if 'object' in data and 'entry' in data:
-            app_id = "3743370545965323"
+            app_id = "1561183891755589"
             if data['object'] == 'whatsapp_business_account':
                 try:
                     for entry in data['entry']:
@@ -200,7 +204,88 @@ def create_deposit_order(request):
         print(f'Oops, Exception: {e}')
         return JsonResponse({'error': 'An error occurred while processing the request.'}, status=500)
 
-import re
+@csrf_exempt
+def create_weltrade_order(request):
+    try:
+        if request.content_type == 'application/json':
+            body = json.loads(request.body)
+        elif request.content_type == 'application/x-www-form-urlencoded':
+            body = request.POST.dict()
+        else:
+            return JsonResponse({'error': 'Unsupported content type'}, status=400)
+
+        
+
+        required_fields = ['encrypted_flow_data', 'encrypted_aes_key', 'initial_vector']
+        for field in required_fields:
+            if field not in body:
+                raise ValueError(f"Missing required field: {field}")
+
+        encrypted_flow_data_b64 = body['encrypted_flow_data']
+        encrypted_aes_key_b64 = body['encrypted_aes_key']
+        initial_vector_b64 = body['initial_vector']
+        
+
+        decrypted_data, aes_key, iv = decrypt_request(
+            encrypted_flow_data_b64, encrypted_aes_key_b64, initial_vector_b64)
+        print(decrypted_data)
+        
+        if decrypted_data.get("version") == "3.0" and decrypted_data.get("action") == "ping":
+            response = {
+               "version": "3.0",
+                "data": {
+                    "status": "active"
+                }
+            }
+            return HttpResponse(encrypt_response(response, aes_key, iv), content_type='text/plain')
+
+        
+        trader = User.objects.get(phone_number=decrypted_data.get("flow_token"))
+
+        InitiateOrders.objects.filter(trader=trader).delete()
+
+        try:
+            InitiateOrders.objects.create(
+                trader=trader,
+                amount=decrypted_data['data'].get('amount'),
+                account_number=decrypted_data['data'].get('account_number'),
+                ecocash_number=decrypted_data['data'].get('ecocash_number'),
+                order_type='weltrade_deposit'
+            )
+        except Exception as e:
+            print(e)
+
+        chat = WhatsAppSession.objects.get(user__phone_number=decrypted_data.get("flow_token"))
+        chat.current_step = 'waiting_for_ecocash_pop'
+        chat.previous_step = 'order_creation'
+        chat.save()
+        
+        response = {
+                "version": "3.0",
+                "screen": "SUCCESS",
+                "data": {
+                    "extension_message_response": {
+                        "params": {
+                            "flow_token": decrypted_data.get("flow_token"),
+                            "flow_state": "finish_flow_application",
+                           
+                        }
+                    }
+                }
+            }
+
+        return HttpResponse(encrypt_response(response, aes_key, iv), content_type='text/plain')
+
+    except ValueError as ve:
+        print(f'Oops, ValueError: {ve}')
+        return JsonResponse({'error': str(ve)}, status=400)
+    except json.JSONDecodeError as jde:
+        print(f'Oops, JSONDecodeError: {jde}')
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f'Oops, Exception: {e}')
+        return JsonResponse({'error': 'An error occurred while processing the request.'}, status=500)
+
 
 def normalize_account_number(account_number: str) -> str:
     """
@@ -668,3 +753,230 @@ def save_image_to_model(decrypted_media, filename):
     content_file = ContentFile(decrypted_media)
     saved_path = default_storage.save(file_path, content_file)
     return saved_path
+
+def normalize_phone(number):
+    """
+    Normalize Ecocash numbers to format: 786xxxxxxx
+    Supports: +263786..., 263786..., 0786...
+    """
+    if not number:
+        return None
+    number = number.strip()
+    if number.startswith("+"):
+        number = number[1:]
+    if number.startswith("263"):
+        number = number[3:]
+    if number.startswith("0"):
+        number = number[1:]
+    return number
+
+@csrf_exempt
+def create_client_verification(request):
+    try:
+        # ---------- PARSE BODY ----------
+        if request.content_type == 'application/json':
+            body = json.loads(request.body)
+        elif request.content_type == 'application/x-www-form-urlencoded':
+            body = request.POST.dict()
+        else:
+            return JsonResponse({'error': 'Unsupported content type'}, status=400)
+
+        required_fields = ['encrypted_flow_data', 'encrypted_aes_key', 'initial_vector']
+        for field in required_fields:
+            if field not in body:
+                raise ValueError(f"Missing required field: {field}")
+
+        encrypted_flow_data_b64 = body['encrypted_flow_data']
+        encrypted_aes_key_b64 = body['encrypted_aes_key']
+        initial_vector_b64 = body['initial_vector']
+
+        # ---------- DECRYPT ----------
+        decrypted_data, aes_key, iv = decrypt_request(
+            encrypted_flow_data_b64,
+            encrypted_aes_key_b64,
+            initial_vector_b64
+        )
+        print("Decrypted client verification data:", decrypted_data)
+
+        # ---------- PING / HEALTH CHECK ----------
+        if decrypted_data.get("version") == "3.0" and decrypted_data.get("action") == "ping":
+            response = {
+                "version": "3.0",
+                "data": {"status": "active"}
+            }
+            return HttpResponse(
+                encrypt_response(response, aes_key, iv),
+                content_type='text/plain'
+            )
+
+        data = decrypted_data.get("data", {}) or {}
+        flow_token = decrypted_data.get("flow_token")
+
+        # ---------- CORE FIELDS FROM FLOW ----------
+        full_name = data.get("name")
+        if not full_name:
+            raise ValueError("Missing 'name' in client verification data.")
+
+        raw_ecocash_number = data.get("ecocash_number")
+        if not raw_ecocash_number:
+            raise ValueError("Missing 'ecocash_number' in client verification data.")
+
+        ecocash_number = normalize_phone(raw_ecocash_number)
+        crypto_wallet_address = data.get("crypto_wallet_address")
+        trader= User.objects.get(phone_number=flow_token)
+
+        # ---------- KYC PHOTOS (ID + SELFIE) ----------
+        kyc_photos = data.get("kyc_photos", [])
+        if len(kyc_photos) < 2:
+            raise ValueError("You must upload 2 KYC photos (ID and selfie with ID).")
+
+        # We agreed:
+        #   kyc_photos[0] -> ID image
+        #   kyc_photos[1] -> Selfie with ID
+
+        base_slug = slugify(full_name) or "client"
+
+        # ----- ID IMAGE -----
+        id_payload = kyc_photos[0] or {}
+        id_meta = id_payload.get("encryption_metadata", {}) or {}
+
+        id_encryption_key = id_meta.get("encryption_key")
+        id_hmac_key = id_meta.get("hmac_key")
+        id_iv = id_meta.get("iv")
+        id_plaintext = id_meta.get("plaintext_hash")
+        id_encrypted_hash = id_meta.get("encrypted_hash")
+        id_cdn_url = id_payload.get("cdn_url")
+
+        if not id_cdn_url:
+            raise ValueError("Missing cdn_url for ID image.")
+
+        id_filename = f"{base_slug}_id.jpg"
+
+        national_id_file = decrypt_whatsapp_media(
+            id_cdn_url,
+            id_encryption_key,
+            id_hmac_key,
+            id_iv,
+            id_plaintext,
+            id_encrypted_hash,
+            id_filename
+        )
+
+        # ----- SELFIE WITH ID -----
+        selfie_payload = kyc_photos[1] or {}
+        selfie_meta = selfie_payload.get("encryption_metadata", {}) or {}
+
+        selfie_encryption_key = selfie_meta.get("encryption_key")
+        selfie_hmac_key = selfie_meta.get("hmac_key")
+        selfie_iv = selfie_meta.get("iv")
+        selfie_plaintext = selfie_meta.get("plaintext_hash")
+        selfie_encrypted_hash = selfie_meta.get("encrypted_hash")
+        selfie_cdn_url = selfie_payload.get("cdn_url")
+
+        if not selfie_cdn_url:
+            raise ValueError("Missing cdn_url for selfie with ID.")
+
+        selfie_filename = f"{base_slug}_selfie_with_id.jpg"
+
+        selfie_file = decrypt_whatsapp_media(
+            selfie_cdn_url,
+            selfie_encryption_key,
+            selfie_hmac_key,
+            selfie_iv,
+            selfie_plaintext,
+            selfie_encrypted_hash,
+            selfie_filename
+        )
+
+        # ---------- SAVE / UPDATE CLIENT VERIFICATION ----------
+        verification, created = ClientVerification.objects.update_or_create(
+            ecocash_number=ecocash_number,
+            defaults={
+                "trader": trader,
+                "name": full_name,
+                "crypto_wallet_address": crypto_wallet_address,
+                "national_id_image": national_id_file,
+                "selfie_with_id": selfie_file,
+
+                "verified": False,
+                "rejected": False,
+                "rejection_reason": "",
+                "verified_by": None,
+                "verified_at": None,
+            },
+        )
+
+        print(
+            f"ClientVerification {'created' if created else 'updated'}: {verification.id}"
+        )
+
+        # --- WhatsApp alerts to internal numbers ---
+        admin_numbers = ["263777636820"]
+        admin_msg = (
+            "🔔 *New KYC Submitted*\n\n"
+            f"Name: {full_name}\n"
+            f"EcoCash: {ecocash_number}\n"
+            f"Wallet: {crypto_wallet_address or 'N/A'}\n\n"
+            "Status: *Pending approval*.\n"
+            "Please review and approve in the dashboard."
+        )
+
+        for admin_number in admin_numbers:
+            service = WhatsAppService()
+
+            try:
+                service.send_message(admin_number, admin_msg)
+                print(f"KYC WhatsApp alert sent to {admin_number}")
+            except Exception as e:
+                print(f"Error sending KYC WhatsApp to {admin_number}: {e}")
+
+        # ---------- OPTIONAL: UPDATE SESSION ----------
+        try:
+            chat = WhatsAppSession.objects.get(user__phone_number=decrypted_data.get("flow_token"))
+            chat.current_step = 'client_verification_created'
+            chat.previous_step = 'client_verification'
+            chat.save()
+        except WhatsAppSession.DoesNotExist:
+            # If no session, you can ignore or log
+            pass
+
+        # ---------- SUCCESS RESPONSE BACK TO FLOW ----------
+        response = {
+            "version": "3.0",
+            "screen": "SUCCESS",
+            "data": {
+                "extension_message_response": {
+                    "params": {
+                        "flow_token": flow_token,
+                        "flow_state": "finish_flow_application",
+                    }
+                }
+            }
+        }
+
+        return HttpResponse(
+            encrypt_response(response, aes_key, iv),
+            content_type='text/plain'
+        )
+
+    except ValueError as ve:
+        print(f"ValueError in create_client_verification: {ve}")
+        return JsonResponse({'error': str(ve)}, status=400)
+
+    except json.JSONDecodeError as jde:
+        print(f"JSONDecodeError in create_client_verification: {jde}")
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    except IntegrityError as ie:
+        print(f"IntegrityError in create_client_verification: {ie}")
+        return JsonResponse(
+            {'error': 'Database constraint error (possibly duplicate EcoCash number).'},
+            status=400
+        )
+
+    except Exception as e:
+        print(f"Unexpected error in create_client_verification: {e}")
+        return JsonResponse(
+            {'error': 'An error occurred while processing the request.'},
+            status=500
+        )

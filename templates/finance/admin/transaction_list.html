@@ -116,6 +116,7 @@
                         <option value="">All Types</option>
                         <option value="deposit" {% if filter_type == 'deposit' %}selected{% endif %}>Deposit</option>
                         <option value="withdrawal" {% if filter_type == 'withdrawal' %}selected{% endif %}>Withdrawal</option>
+                        <option value="weltrade_deposit" {% if filter_type == 'weltrade_deposit' %}selected{% endif %}>Weltrade Deposit</option>
                     </select>
                 </div>
 
@@ -240,8 +241,12 @@
                             <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-green-100 to-green-50 text-green-800 border border-green-200">
                                 <i class="fas fa-arrow-down mr-1.5"></i>Deposit
                             </span>
+                            {% elif transaction.transaction_type == 'weltrade_deposit'%}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-teal-100 to-teal-50 text-blue-800 border border-blue-200">
+                                <i class="fas fa-arrow-up mr-1.5"></i>Weltrade
+                            </span>
                             {% else %}
-                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-blue-50 text-blue-800 border border-blue-200">
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-red-100 to-red-50 text-red-800 border border-blue-200">
                                 <i class="fas fa-arrow-up mr-1.5"></i>Withdrawal
                             </span>
                             {% endif %}

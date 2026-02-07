@@ -13,10 +13,12 @@ from django.core.exceptions import ValidationError
 class BillingCycle(models.Model):
     TRANSACTION_DEPOSIT = "deposit"
     TRANSACTION_WITHDRAWAL = "withdrawal"
+    TRANSACTION_WELTRADE_DEPOSIT = "weltrade_deposit"
 
     TRANSACTION_TYPES = (
         (TRANSACTION_DEPOSIT, "Deposit"),
         (TRANSACTION_WITHDRAWAL, "Withdrawal"),
+        (TRANSACTION_WELTRADE_DEPOSIT, "weltrade_deposit"),
     )
 
     client_name = models.CharField(max_length=255)
@@ -25,9 +27,12 @@ class BillingCycle(models.Model):
 
     deposit_fee_rate = models.DecimalField(
         max_digits=8, decimal_places=4, default=Decimal("0.0075")
-    )  # 0.5%
+    )  
 
     withdrawal_fee_rate = models.DecimalField(
+        max_digits=8, decimal_places=4, default=Decimal("0.01")
+    )
+    weltrade_fee_rate = models.DecimalField(
         max_digits=8, decimal_places=4, default=Decimal("0.01")
     )  # 1%
 
@@ -48,6 +53,9 @@ class BillingCycle(models.Model):
 
         elif transaction_type == self.TRANSACTION_WITHDRAWAL:
             fee = amount * self.withdrawal_fee_rate
+        
+        elif transaction_type == self.TRANSACTION_WELTRADE_DEPOSIT:
+            fee = amount * self.weltrade_fee_rate
 
         else:
             raise ValueError("Invalid transaction type")
@@ -67,11 +75,17 @@ class BillingCycle(models.Model):
             end_date=(now() + timedelta(days=30)).date(),
             deposit_fee_rate=self.deposit_fee_rate,
             withdrawal_fee_rate=self.withdrawal_fee_rate,
+            weltrade_fee_rate=self.weltrade_fee_rate,
         )
 
 
 class TransactionCharge(models.Model):
     """Fixed charges table based on amount ranges"""
+    TRANSACTION_TYPES = (
+        ('deposit', 'Deposit to Deriv'),
+        ('withdrawal', 'Withdrawal from Deriv'),
+        ('weltrade_deposit', 'Deposit to Weltrade'),
+    )
     min_amount = models.DecimalField(
         max_digits=10, 
         decimal_places=2,
@@ -103,6 +117,7 @@ class TransactionCharge(models.Model):
         default=0.00,
         help_text="Additional fixed fee (only for $10+ range)"
     )
+    transaction_type = models.CharField(max_length=100,choices=TRANSACTION_TYPES, default='deposit')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -134,14 +149,15 @@ class TransactionCharge(models.Model):
             return self.fixed_charge
     
     @classmethod
-    def get_charge_for_amount(cls, amount):
-        """Get the appropriate charge for a given amount"""
+    def get_charge_for_amount(cls, amount, transaction_type):
+        """Get the appropriate charge for a given amount and transaction type"""
         try:
             # First check for percentage-based range ($10+)
             percentage_charge = cls.objects.filter(
                 min_amount__lte=amount,
                 max_amount__gte=amount,
                 is_percentage=True,
+                transaction_type=transaction_type,
                 is_active=True
             ).first()
             
@@ -153,15 +169,18 @@ class TransactionCharge(models.Model):
                 min_amount__lte=amount,
                 max_amount__gte=amount,
                 is_percentage=False,
+                transaction_type=transaction_type,
                 is_active=True
             ).first()
             
             if fixed_charge:
                 return fixed_charge.calculate_charge(amount)
             
-            # If no specific range found, use the highest percentage range
+            # If no specific range found for this transaction type, 
+            # use the highest percentage range for this transaction type
             highest_percentage = cls.objects.filter(
                 is_percentage=True,
+                transaction_type=transaction_type,
                 is_active=True
             ).order_by('-min_amount').first()
             
@@ -174,11 +193,11 @@ class TransactionCharge(models.Model):
         # Default fallback
         return Decimal('0.00')
 
-
 class EcoCashTransaction(models.Model):
     TRANSACTION_TYPES = (
         ('deposit', 'Deposit to Deriv'),
         ('withdrawal', 'Withdrawal from Deriv'),
+        ('weltrade_deposit', 'Deposit to Weltrade'),
     )
     
     STATUS_CHOICES = (
@@ -197,7 +216,7 @@ class EcoCashTransaction(models.Model):
     # Core transaction fields
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     deriv_account_number = models.CharField(
-        max_length=50,
+        max_length=100,
         help_text="Your Deriv account number / CR number",
         verbose_name="Deriv Account/CR Number"
     )
@@ -301,8 +320,8 @@ class EcoCashTransaction(models.Model):
         # Charge logic
         if self.transaction_type == 'withdrawal':
             self.charge = 0
-        elif self.charge == 0 and self.amount > 0 and self.transaction_type == 'deposit':
-            self.charge = TransactionCharge.get_charge_for_amount(self.amount)
+        elif self.charge == 0 and self.amount > 0 and self.transaction_type == 'deposit' or self.transaction_type == 'weltrade_deposit': 
+            self.charge = TransactionCharge.get_charge_for_amount(self.amount, self.transaction_type)
         
         # Status logic
         if self.transaction_type == 'deposit' and self.status == 'pending':
@@ -324,9 +343,9 @@ class EcoCashTransaction(models.Model):
         super().save(*args, **kwargs)
 
         # Billing cycle integration (deposit + withdrawal)
-        if is_new_completion and self.transaction_type in ["deposit", "withdrawal"]:
+        if is_new_completion and self.transaction_type in ["deposit", "withdrawal","weltrade_deposit"]:
             billing, created = BillingCycle.objects.get_or_create(
-                client_name="Supreme AI",
+                client_name="Henry",
                 paid=False,
                 defaults={
                     "start_date": now().date(),
@@ -360,7 +379,7 @@ class EcoCashTransaction(models.Model):
     # --------------------
     @property
     def total_amount(self):
-        if self.transaction_type == 'deposit':
+        if self.transaction_type == 'deposit' or self.transaction_type == 'weltrade_deposit':
             return self.amount + self.charge
         return self.amount
     
@@ -381,7 +400,7 @@ class EcoCashTransaction(models.Model):
     # ACTION METHODS (UNCHANGED)
     # -------------------------
     def submit_pop(self, ecocash_reference, receipt_image=None):
-        if self.transaction_type != 'deposit':
+        if self.transaction_type == 'withdrawal':
             raise ValueError("Only deposit transactions require POP")
         
         self.ecocash_reference = ecocash_reference
@@ -396,7 +415,7 @@ class EcoCashTransaction(models.Model):
             )
     
     def mark_deposit_completed(self, deriv_transaction_id, notes=""):
-        if self.transaction_type != 'deposit':
+        if self.transaction_type == 'withdrawal':
             raise ValueError("This method is for deposit transactions only")
         
         self.status = 'completed'

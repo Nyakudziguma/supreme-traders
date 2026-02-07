@@ -17,6 +17,7 @@ from .models import IncomingMessage, IncomingCall, OutgoingMessage, EcocashTrans
 from .forms import MoneyTransferForm
 from whatsapp.services import WhatsAppService
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
 
 
 service = WhatsAppService()

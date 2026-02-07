@@ -285,14 +285,14 @@ def marketing_template_list(request):
             'id': 1,
             'name': 'Transaction Success',
             'type': 'transaction_success',
-            'content': '🎉 Transaction Successful!\n\nYour deposit of ${amount} has been processed successfully!\n\nTransaction ID: {transaction_id}\nAccount: {account_number}\n\nThank you for using Supreme AI!',
+            'content': '🎉 Transaction Successful!\n\nYour deposit of ${amount} has been processed successfully!\n\nTransaction ID: {transaction_id}\nAccount: {account_number}\n\nThank you for using Henry Patson!',
             'variables': ['amount', 'transaction_id', 'account_number']
         },
         {
             'id': 2,
             'name': 'Welcome Message',
             'type': 'welcome',
-            'content': '👋 Welcome to Supreme AI!\n\nWe\'re excited to have you on board!\n\nStart your trading journey with us and experience intelligent trading signals.\n\nNeed help? Contact our support team.',
+            'content': '👋 Welcome to Henry Patson!\n\nWe\'re excited to have you on board!\n\nStart your trading journey with us and experience intelligent trading signals.\n\nNeed help? Contact our support team.',
             'variables': []
         },
         {
@@ -306,7 +306,7 @@ def marketing_template_list(request):
             'id': 4,
             'name': 'Educational Content',
             'type': 'educational',
-            'content': '📚 Trading Tip of the Day!\n\n{tip_content}\n\nStay informed and trade smarter with Supreme AI!\n\nHappy trading!',
+            'content': '📚 Trading Tip of the Day!\n\n{tip_content}\n\nStay informed and trade smarter with Henry Patson!\n\nHappy trading!',
             'variables': ['tip_content']
         },
         {
@@ -385,7 +385,7 @@ Your deposit of ${transaction.amount} has been processed successfully!
 Transaction ID: {transaction.reference_number}
 Account: {transaction.deriv_account_number}
 
-Thank you for using Supreme AI!
+Thank you for using Henry Patson!
 """
             elif notification_type == 'failed':
                 message = f"""

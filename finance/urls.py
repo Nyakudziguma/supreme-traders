@@ -1,6 +1,8 @@
 # finance/urls.py
 from django.urls import path
 from . import views_admin
+from weltrade import views as binance_views
+
 
 app_name = 'finance'
 
@@ -24,10 +26,21 @@ urlpatterns = [
     path('client-verification/<int:pk>/update/', views_admin.client_verification_update, name='client_verification_update'),
     path('client-verification/<int:pk>/delete/', views_admin.client_verification_delete, name='client_verification_delete'),
     path('client-verification/bulk-action/', views_admin.client_verification_bulk_action, name='client_verification_bulk_action'),
+    path('client-verification/<int:pk>/reject/', views_admin.client_verification_reject, name='client_verification_reject'),
+    path('client-verification/<int:pk>/approve/', views_admin.client_verification_approve, name='client_verification_approve'),
+    path('client-verification/<int:pk>/update/', views_admin.client_verification_update, name='client_verification_update'),
     path('api/verify-ecocash/', views_admin.verify_ecocash_api, name='verify_ecocash_api'),
      path('cashout-transactions/', views_admin.cashout_transaction_list, name='cashout_transaction_list'),
     path('cashout-transactions/<int:pk>/complete/', views_admin.cashout_transaction_mark_completed, name='cashout_transaction_mark_completed'),
     path('cashout-transactions/bulk-complete/', views_admin.cashout_transaction_bulk_complete, name='cashout_transaction_bulk_complete'),
     path('api/cashout-transaction/', views_admin.cashout_transaction_api, name='cashout_transaction_api'),
+    path('cashout-transactions/create/', views_admin.cashout_transaction_create, name='cashout_transaction_create'),
+
+    path('binance-settings/', binance_views.binance_settings_list, name='binance_settings_list'),
+    path('binance-settings/create/', binance_views.binance_settings_create, name='binance_settings_create'),
+    path('binance-settings/<int:pk>/update/', binance_views.binance_settings_update, name='binance_settings_update'),
+    path('binance-settings/<int:pk>/delete/', binance_views.binance_settings_delete, name='binance_settings_delete'),
+    path('binance-settings/<int:pk>/toggle/', binance_views.binance_settings_toggle, name='binance_settings_toggle'),
+    path('binance-settings/<int:pk>/test/', binance_views.binance_settings_test, name='binance_settings_test'),
     
 ]
