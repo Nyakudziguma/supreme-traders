@@ -5,6 +5,7 @@ from accounts.models import User
 from deriv.models import AuthDetails
 import re
 import base64
+from .models import InitiateSubscription
 
 class MessageHandler:
     def __init__(self):
@@ -237,15 +238,51 @@ class MessageHandler:
             elif session.current_step == 'books' and selected_id:
                 from books.models import Book
                 book = Book.objects.filter(id=selected_id).first() if selected_id else None
-                caption = book.description
-                file_url = book.file.url
-                title = book.title
-                print("File path: ",file_url)
-                self.whatsapp_service.send_documents(phone_number,file_url, caption, title)
-                switch = Switch.objects.filter(transaction_type='books').first()
-                self.whatsapp_service.send_message(phone_number, switch.on_message)
-                self.whatsapp_service.update_session_step(phone_number,"menu", "menu")
-                return
+                if not book.is_paid:
+                    caption = book.description
+                    file_url = book.file.url
+                    title = book.title
+                    print("File path: ",file_url)
+                    self.whatsapp_service.send_documents(phone_number,file_url, caption, title)
+                    switch = Switch.objects.filter(transaction_type='books').first()
+                    self.whatsapp_service.send_message(phone_number, switch.on_message)
+                    book.increment_download_count()
+                    self.whatsapp_service.update_session_step(phone_number,"menu", "menu")
+                    return
+                else:
+                    
+                    try:
+                        prev_sub = InitiateSubscription.objects.filter(trader=session.user).first()
+                        if prev_sub:
+                            prev_sub.ecocash_message=''
+                            prev_sub.ecocash_number=''
+                            prev_sub.subscription_type='books'
+                            prev_sub.subscription_id=selected_id
+                            prev_sub.save()
+                            message = f"Great! Here's your paymnent summary for the book. *Check Total \n\n*Total To Pay:* ${book.price}\n\n Payment Code: \n *153 * 3 * 1 * 064550 * Amount #\nName: Tashinga \n\nPay exact total or funds won't reflect. \n\n⚠️  Please note: \n\n*Third party payments are NOT allowed.*\n\nOnly send from the same Ecocash number you provided. \n*_Once you have made the payment, upload the a screeshot of the transaction by clicking the upload pop button below._*"
+                            self.whatsapp_service.send_subscription_pop_flow(phone_number, message)
+                            self.whatsapp_service.update_session_step(phone_number,"subscription_creation", "subscription_creation")
+                            return
+                        else:
+                            InitiateSubscription.objects.create(
+                                trader = session.user,
+                                subscription_type='books',
+                                subscription_id=selected_id
+                            )
+                            message = f"Great! Here's your paymnent summary for the book. *Check Total \n\n*Total To Pay:* ${book.price}\n\n Payment Code: \n *153 * 3 * 1 * 064550 * Amount #\nName: Tashinga \n\nPay exact total or funds won't reflect. \n\n⚠️  Please note: \n\n*Third party payments are NOT allowed.*\n\nOnly send from the same Ecocash number you provided. \n*_Once you have made the payment, upload the a screeshot of the transaction by clicking the upload pop button below._*"
+                            self.whatsapp_service.send_subscription_pop_flow(phone_number, message)
+                            self.whatsapp_service.update_session_step(phone_number,"subscription_creation", "subscription_creation")
+                            return
+                    except InitiateSubscription.DoesNotExist():
+                        InitiateSubscription.objects.create(
+                                trader = session.user,
+                                subscription_type='books',
+                                subscription_id=selected_id
+                            )
+                        message = f"Great! Here's your paymnent summary for the book. *Check Total \n\n*Total To Pay:* ${book.price}\n\n Payment Code: \n *153 * 3 * 1 * 064550 * Amount #\nName: Tashinga \n\nPay exact total or funds won't reflect. \n\n⚠️  Please note: \n\n*Third party payments are NOT allowed.*\n\nOnly send from the same Ecocash number you provided. \n*_Once you have made the payment, upload the a screeshot of the transaction by clicking the upload pop button below._*"
+                        self.whatsapp_service.send_subscription_pop_flow(phone_number, message)
+                        self.whatsapp_service.update_session_step(phone_number,"subscription_creation", "subscription_creation")
+                        return
 
             elif session.current_step == 'finish_signal_subscription':
                 self.whatsapp_service.update_signals_subscription(phone_number)
@@ -283,6 +320,15 @@ class MessageHandler:
                     self.whatsapp_service.create_weltrade_transaction(phone_number)
                 self.whatsapp_service.update_session_step(phone_number,"finish_order_creation", "complete_deposit_order", conversation_data=None)
                 return
+            
+            elif session.current_step == 'finish_subscription_creation':
+                sub = InitiateSubscription.objects.filter(trader=session.user).first()
+                if sub.subscription_type=='books':
+                    self.whatsapp_service.create_subscription_transaction(phone_number)
+                self.whatsapp_service.update_session_step(phone_number,"finish_order_creation", "complete_deposit_order", conversation_data=None)
+                return
+            
+            
 
             else:
                 self.whatsapp_service.send_menu_message(phone_number)

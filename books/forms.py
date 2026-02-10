@@ -53,15 +53,18 @@ class BookForm(forms.ModelForm):
     
     def clean_price(self):
         price = self.cleaned_data.get('price')
-        is_paid = self.cleaned_data.get('is_paid')
+        is_paid = self.data.get('is_paid')  
         
-        if is_paid and (price is None or price <= 0):
-            raise forms.ValidationError('Price must be greater than 0 for paid books.')
+        is_paid = is_paid == 'on'
         
-        if not is_paid and price and price > 0:
-            raise forms.ValidationError('Free books cannot have a price. Set price to 0 or leave blank.')
-        
-        return price
+        if is_paid:
+            if price is None or price <= 0:
+                raise forms.ValidationError('Price must be greater than 0 for paid books.')
+            return price
+        else:
+            if price is None or price <= 0:
+                return 0
+            return 0
 
 class BookSearchForm(forms.Form):
     search = forms.CharField(required=False, widget=forms.TextInput(attrs={

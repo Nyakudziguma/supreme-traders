@@ -61,6 +61,20 @@ class InitiateOrders(models.Model):
 
      def __str__(self):
             return self.account_number
+     
+class InitiateSubscription(models.Model):
+     SUBSCRIPTION_TYPE = (
+        ('books', 'Books'),
+        ('signals', 'Signals'),
+     )
+     trader = models.ForeignKey(User, on_delete=models.CASCADE)
+     ecocash_number = models.CharField(max_length=15)
+     ecocash_message = models.TextField()
+     subscription_id = models.CharField(max_length=15)
+     subscription_type = models.CharField(max_length=50, choices=SUBSCRIPTION_TYPE, default='books')
+
+     def __str__(self):
+            return self.ecocash_number
 
 class InitiateSellOrders(models.Model):
      trader = models.ForeignKey(User, on_delete=models.CASCADE)

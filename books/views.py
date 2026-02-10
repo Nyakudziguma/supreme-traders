@@ -13,16 +13,16 @@ from .forms import BookForm, BookSearchForm
 @login_required
 def books_dashboard(request):
     """Books dashboard page"""
-    user_books = Book.objects.filter(posted_by=request.user).order_by('-created_at')[:5]
+    user_books = Book.objects.all().order_by('-created_at')[:5]
     
     all_books = Book.objects.filter(is_paid=False).order_by('-created_at')[:8]
     
     featured_books = Book.objects.filter(is_featured=True, is_paid=False).order_by('-created_at')[:4]
     
-    total_books = Book.objects.filter(posted_by=request.user).count()
-    paid_books = Book.objects.filter(posted_by=request.user, is_paid=True).count()
-    free_books = Book.objects.filter(posted_by=request.user, is_paid=False).count()
-    total_downloads = Book.objects.filter(posted_by=request.user).aggregate(Sum('download_count'))['download_count__sum'] or 0
+    total_books = Book.objects.filter().count()
+    paid_books = Book.objects.filter(is_paid=True).count()
+    free_books = Book.objects.filter(is_paid=False).count()
+    total_downloads = Book.objects.filter().aggregate(Sum('download_count'))['download_count__sum'] or 0
     
     context = {
         'user_books': user_books,
@@ -39,7 +39,7 @@ def books_dashboard(request):
 @login_required
 def books_list(request):
     """List all books with search and filter"""
-    books = Book.objects.filter(posted_by=request.user).order_by('-created_at')
+    books = Book.objects.all().order_by('-created_at')
     
     # Initialize search form
     form = BookSearchForm(request.GET or None)

@@ -245,6 +245,10 @@
                             <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-teal-100 to-teal-50 text-blue-800 border border-blue-200">
                                 <i class="fas fa-arrow-up mr-1.5"></i>Weltrade
                             </span>
+                             {% elif transaction.transaction_type == 'book_subscription'%}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-amber-100 to-amber-50 text-blue-800 border border-blue-200">
+                                <i class="fas fa-arrow-up mr-1.5"></i>Books
+                            </span>
                             {% else %}
                             <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-red-100 to-red-50 text-red-800 border border-blue-200">
                                 <i class="fas fa-arrow-up mr-1.5"></i>Withdrawal

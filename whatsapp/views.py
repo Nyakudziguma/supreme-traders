@@ -36,6 +36,7 @@ import re
 from django.utils.text import slugify
 from django.db import IntegrityError
 from .services import WhatsAppService
+from .models import InitiateSubscription
 
 class WebhookView(APIView): 
     permission_classes = [AllowAny]
@@ -571,6 +572,96 @@ def add_ecocash_message_pop(request):
     except Exception as e:
         print(f'Oops, Exception: {e}')
         return JsonResponse({'error': 'An error occurred while processing the request.'}, status=500)
+
+@csrf_exempt
+def add_subscription_pop(request):
+    try:
+        if request.content_type == 'application/json':
+            body = json.loads(request.body)
+        elif request.content_type == 'application/x-www-form-urlencoded':
+            body = request.POST.dict()
+        else:
+            return JsonResponse({'error': 'Unsupported content type'}, status=400)
+
+        
+
+        required_fields = ['encrypted_flow_data', 'encrypted_aes_key', 'initial_vector']
+        for field in required_fields:
+            if field not in body:
+                raise ValueError(f"Missing required field: {field}")
+
+        encrypted_flow_data_b64 = body['encrypted_flow_data']
+        encrypted_aes_key_b64 = body['encrypted_aes_key']
+        initial_vector_b64 = body['initial_vector']
+        
+
+        decrypted_data, aes_key, iv = decrypt_request(
+            encrypted_flow_data_b64, encrypted_aes_key_b64, initial_vector_b64)
+        
+        if decrypted_data.get("version") == "3.0" and decrypted_data.get("action") == "ping":
+            response = {
+               "version": "3.0",
+                "data": {
+                    "status": "active"
+                }
+            }
+            return HttpResponse(encrypt_response(response, aes_key, iv), content_type='text/plain')
+
+        
+        trader = User.objects.get(phone_number=decrypted_data.get("flow_token"))
+        print("Decrypted data for Ecocash POP:", decrypted_data)
+        
+        try:
+            sub = InitiateSubscription.objects.filter(trader=trader).first()
+
+            if sub:
+                sub.ecocash_number = decrypted_data['data'].get('ecocash_number')
+                sub.ecocash_message = decrypted_data['data'].get('ecocash_message')
+                sub.save()
+            else:
+                service = WhatsAppService()
+                service.send_message(
+                    decrypted_data['data'].get('flow_token'),
+                    "An error occured while processing your subscription. Please contact support or start again."
+                )
+                print("Subscription not found:")
+
+        except InitiateSubscription.DoesNotExist:
+            service = WhatsAppService()
+            service.send_message(decrypted_data['data'].get('flow_token'),"An error occured while processing your subscription. Please contact support or start again.")
+            print("Subscription not found: ")
+
+        chat = WhatsAppSession.objects.get(user__phone_number=decrypted_data.get("flow_token"))
+        chat.current_step = 'finish_subscription_creation'
+        chat.previous_step = 'subscription_creation'
+        chat.save()
+        
+        response = {
+                "version": "3.0",
+                "screen": "SUCCESS",
+                "data": {
+                    "extension_message_response": {
+                        "params": {
+                            "flow_token": decrypted_data.get("flow_token"),
+                            "flow_state": "finish_flow_application",
+                           
+                        }
+                    }
+                }
+            }
+
+        return HttpResponse(encrypt_response(response, aes_key, iv), content_type='text/plain')
+
+    except ValueError as ve:
+        print(f'Oops, ValueError: {ve}')
+        return JsonResponse({'error': str(ve)}, status=400)
+    except json.JSONDecodeError as jde:
+        print(f'Oops, JSONDecodeError: {jde}')
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        print(f'Oops, Exception: {e}')
+        return JsonResponse({'error': 'An error occurred while processing the request.'}, status=500)
+
 
 @csrf_exempt
 def add_signals_pop(request):

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import WhatsAppSession, WhatsAppMessage, InitiateOrders, EcocashPop, Switch, InitiateSellOrders
+from .models import WhatsAppSession, WhatsAppMessage, InitiateOrders, EcocashPop, Switch, InitiateSellOrders, InitiateSubscription
 
 # Register your models here.
 admin.site.register(InitiateOrders)
@@ -24,3 +24,4 @@ class SwitchAdmin(admin.ModelAdmin):
     search_fields = ('transaction_type',)
     list_filter = ('is_active',)
 admin.site.register(Switch, SwitchAdmin)
+admin.site.register(InitiateSubscription)

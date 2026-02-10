@@ -10,14 +10,14 @@ from .ocr_service import EcoCashOCRService
 from decimal import Decimal, InvalidOperation
 import base64
 import io
-from .models import InitiateOrders, EcocashPop, ClientVerification
+from .models import InitiateOrders, EcocashPop, ClientVerification, InitiateSubscription
 from ecocash.models import CashOutTransaction
 import re
 import uuid
 from datetime import datetime
 import asyncio
 from datetime import timedelta
-
+from books.models import Book
 class WhatsAppService:
     def __init__(self):
         self.api_url = settings.WHATSAPP_URL
@@ -188,10 +188,12 @@ class WhatsAppService:
         from books.models import Book
         headers = {"Authorization": self.api_token}
         books = Book.objects.all()
+
         rows = [
             {
             "id": book.id,
             "title": f"📈 {book.title}",
+            "description": f"💲 Paid: {book.is_paid}"
             }
             for book in books
         ]
@@ -877,6 +879,48 @@ class WhatsAppService:
         response = requests.post(self.api_url, headers=headers, json=payload)
         print("Send POP Response: ", response.json())
         return
+    
+    def send_subscription_pop_flow(self, phone_number, message):
+        headers = {"Authorization": self.api_token}
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_number,
+            "type": "interactive",
+            "interactive" : {
+            "type": "flow",
+            "header": {
+            "type": "text",
+            "text": "CONFIRM DEPOSIT"
+            },
+            "body": {
+            "text": f"{message}"
+            },
+            "footer": {
+            "text": "#supreme #instant #secure"
+            },
+            "action": {
+            "name": "flow",
+            "parameters": {
+                "flow_message_version": "3",
+                "flow_token": f"{phone_number}",
+                "flow_id": "1426791189113016",
+                "flow_cta": "UPLOAD POP",
+                "flow_action": "navigate",
+                "flow_action_payload": {
+                "screen": "POP",
+                "data": {
+                    "ecocash_message": "ecocash_message",
+                }
+                }
+            }
+            }
+            }
+         }
+
+        response = requests.post(self.api_url, headers=headers, json=payload)
+        print("Send POP Response: ", response.json())
+        return
 
     def send_signals_flow(self, phone_number, message):
         headers = {"Authorization": self.api_token}
@@ -919,6 +963,158 @@ class WhatsAppService:
         response = requests.post(self.api_url, headers=headers, json=payload)
         print("Send POP Response: ", response.json())
         return
+    
+    def create_subscription_transaction(self, fromId):
+        """Create a deposit transaction using unified extraction service."""
+        try:
+            order = InitiateSubscription.objects.get(trader__phone_number=fromId)
+            trader = User.objects.get(phone_number=fromId)
+            ecocash_number = order.ecocash_number
+
+            pop = self.ocr_service.extract_from_any_source(message=order.ecocash_message)
+            
+            
+            # Check for extraction errors
+            if 'error' in pop:
+                error_msg = pop.get('error', 'Unknown error')
+                self.send_subscription_pop_flow(fromId, f"❌ Extraction Error: {error_msg}\n\nPlease resend the ecocash transaction message.")
+            
+            # Extract transaction details
+            extracted_reference = pop.get('transaction_details', {}).get('reference')
+            total_received_amount = pop.get('transaction_details', {}).get('amount')
+            extraction_source = pop.get('source', 'unknown')
+
+            print(f"Extracted txn_id: {extracted_reference} and amount: {total_received_amount} from {extraction_source}.")
+
+            if not extracted_reference:
+                message = (
+                    f"We couldn't extract a valid Transaction ID from your {extraction_source}. "
+                    f"Please resend the full EcoCash message.\n\n"
+                    f"Extraction source: {extraction_source}"
+                )
+                self.send_subscription_pop_flow(fromId, message)
+                return
+            
+            
+            # Normalize phone number for lookup
+            normalized_phone = ecocash_number.lstrip('0')
+            if normalized_phone.startswith('263'):
+                normalized_phone = normalized_phone[3:]
+            
+            # Look for matching cashout transaction
+            cashout = CashOutTransaction.objects.filter(
+                phone__in=[ecocash_number, normalized_phone, '0' + normalized_phone, 
+                        '263' + normalized_phone, '+263' + normalized_phone],
+                txn_id=extracted_reference
+            ).first()
+            
+            # Try partial match if exact not found
+            if not cashout:
+                cashout = CashOutTransaction.objects.filter(
+                    phone=ecocash_number, 
+                    txn_id__endswith=extracted_reference
+                ).first()
+                print("Partial match cashout:", cashout)
+
+            if cashout:
+                if cashout.completed:
+                    try:
+                        txn = EcoCashTransaction.objects.get(
+                            ecocash_number=ecocash_number,
+                            ecocash_reference=cashout.txn_id,
+                            status='completed'
+                        )
+                        credited_account = txn.deriv_account_number[:2] + '****' + txn.deriv_account_number[-3:]
+                        message = (
+                            f"Ooops! Sorry!\n\nThis transaction was already redeemed and credited to Deriv account: "
+                            f"`{credited_account}`.\n\nIf you would like more information, please feel free to contact support.\n\nThank you!"
+                        )
+                        self.update_session_step(fromId, "finish_order_creation", "menu", conversation_data=None)
+                        self.send_message(fromId, message)
+                        return
+                    except EcoCashTransaction.DoesNotExist:
+                        message = (
+                            "Your transaction was marked completed, but we could not find the credited account details. "
+                            "Please contact support."
+                        )
+                    return self.send_message(fromId, message)
+
+                else:
+                    try:
+                        total_amount = Decimal(cashout.amount)
+                    except (ValueError, TypeError, InvalidOperation):
+                        self.send_message(fromId, f"Failed to get the transaction amount from {extraction_source}. Please contact support.")
+                        return
+                    
+                    cashout.trader = trader
+                    cashout.save()
+                    
+                    # Create the EcoCashTransaction with NET amount
+                    transaction = EcoCashTransaction.objects.create(
+                        user=trader,
+                        transaction_type='book_subscription',
+                        amount=total_amount,  # This is the amount that goes to Deriv
+                        deriv_account_number='',
+                        ecocash_number=ecocash_number,
+                        ecocash_name=cashout.name,
+                        reference_number=f"BK{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                        ecocash_reference=extracted_reference,
+                        charge=0,  
+                        currency='USD',
+                        status='processing',  
+                    )
+            
+                        # Create receipt without image
+                    receipt = TransactionReceipt.objects.create(
+                        transaction=transaction,
+                        uploaded_by=trader,
+                        verified=True,
+                        verified_at=datetime.now(),
+                        verification_notes=f"Auto-verified via text message {extraction_source}."
+                    )
+                    
+                    self.send_message(fromId, f"_*Processing your payment...*_")
+                    
+                    book = Book.objects.filter(id=order.subscription_id).first()
+                    if not book:
+                        transaction.status="failed"
+                        transaction.save()
+                        return self.send_message(fromId, "The book you selected does not exist, please try again or contact support.")
+                    
+                    if book.price > total_amount:
+                        transaction.status="failed"
+                        transaction.save()
+                        return self.send_message(fromId, f"The amount you entered is invalid for the selected book. The book price is: ${book.price}")
+                    
+                    caption = book.description
+                    file_url = book.file.url
+                    title = book.title
+                    self.send_documents(fromId,file_url, caption, title)
+                    book.increment_download_count()
+                    cashout.completed = True
+                    cashout.save()
+                    transaction.status="completed"
+                    transaction.save()
+                    
+                    return 
+            else:
+                message = (
+                    f"We could not find a matching EcoCash transaction for the ID you provided.\n\n"
+                    f"Extracted from: {extraction_source}\n"
+                    f"Transaction ID: {extracted_reference}\n"
+                    f"Phone: {ecocash_number}\n\n"
+                    f"Please resend the full message or confirm your transaction details."
+                )
+                self.send_subscription_pop_flow(fromId, message)
+                return
+
+        except InitiateSubscription.DoesNotExist:
+            message = "Sorry! Your order could not be found. Please start again or contact support."
+            self.send_subscription_pop_flow(fromId, message)
+        
+        except User.DoesNotExist:
+            message = "Trader account not found. Please contact support."
+            return self.send_message(fromId, message)
         
     def create_deposit_transaction(self, fromId):
         """Create a deposit transaction using unified extraction service."""

@@ -125,18 +125,31 @@
 </div>
 
 <script>
-    // Toggle price field based on paid status
-    document.getElementById('{{ form.is_paid.id_for_label }}').addEventListener('change', function() {
-        const priceField = document.getElementById('{{ form.price.id_for_label }}');
-        if (this.checked) {
+    const paidCheckbox = document.getElementById('{{ form.is_paid.id_for_label }}');
+    const priceField = document.getElementById('{{ form.price.id_for_label }}');
+    
+    function updatePriceField() {
+        if (paidCheckbox.checked) {
             priceField.required = true;
             priceField.placeholder = 'Enter price';
+            // Add a minimum value constraint
+            priceField.min = '0.01';
         } else {
             priceField.required = false;
-            priceField.value = '';
+            priceField.min = '0';
+            // Only clear if empty or 0
+            if (!priceField.value || parseFloat(priceField.value) === 0) {
+                priceField.value = '';
+            }
             priceField.placeholder = '0.00';
         }
-    });
+    }
+    
+    // Set initial state
+    updatePriceField();
+    
+    // Update on change
+    paidCheckbox.addEventListener('change', updatePriceField);
     
     // File size validation
     document.getElementById('{{ form.file.id_for_label }}').addEventListener('change', function() {

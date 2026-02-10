@@ -14,11 +14,13 @@ class BillingCycle(models.Model):
     TRANSACTION_DEPOSIT = "deposit"
     TRANSACTION_WITHDRAWAL = "withdrawal"
     TRANSACTION_WELTRADE_DEPOSIT = "weltrade_deposit"
+    TRANSACTION_BOOK_SUBSCRIPTION = "book_subscription"
 
     TRANSACTION_TYPES = (
         (TRANSACTION_DEPOSIT, "Deposit"),
         (TRANSACTION_WITHDRAWAL, "Withdrawal"),
         (TRANSACTION_WELTRADE_DEPOSIT, "weltrade_deposit"),
+        (TRANSACTION_BOOK_SUBSCRIPTION, "book_subscription")
     )
 
     client_name = models.CharField(max_length=255)
@@ -56,6 +58,9 @@ class BillingCycle(models.Model):
         
         elif transaction_type == self.TRANSACTION_WELTRADE_DEPOSIT:
             fee = amount * self.weltrade_fee_rate
+        
+        elif transaction_type == self.TRANSACTION_BOOK_SUBSCRIPTION:
+            fee = amount * self.deposit_fee_rate
 
         else:
             raise ValueError("Invalid transaction type")
@@ -198,6 +203,7 @@ class EcoCashTransaction(models.Model):
         ('deposit', 'Deposit to Deriv'),
         ('withdrawal', 'Withdrawal from Deriv'),
         ('weltrade_deposit', 'Deposit to Weltrade'),
+        ('book_subscription', 'Book Subscription')
     )
     
     STATUS_CHOICES = (
@@ -218,7 +224,8 @@ class EcoCashTransaction(models.Model):
     deriv_account_number = models.CharField(
         max_length=100,
         help_text="Your Deriv account number / CR number",
-        verbose_name="Deriv Account/CR Number"
+        verbose_name="Deriv Account/CR Number",
+        blank=True, null=True
     )
     ecocash_number = models.CharField(
         max_length=50,
@@ -320,6 +327,8 @@ class EcoCashTransaction(models.Model):
         # Charge logic
         if self.transaction_type == 'withdrawal':
             self.charge = 0
+        elif self.transaction_type == 'book_subscription':
+            self.charge = 0
         elif self.charge == 0 and self.amount > 0 and self.transaction_type == 'deposit' or self.transaction_type == 'weltrade_deposit': 
             self.charge = TransactionCharge.get_charge_for_amount(self.amount, self.transaction_type)
         
@@ -343,7 +352,7 @@ class EcoCashTransaction(models.Model):
         super().save(*args, **kwargs)
 
         # Billing cycle integration (deposit + withdrawal)
-        if is_new_completion and self.transaction_type in ["deposit", "withdrawal","weltrade_deposit"]:
+        if is_new_completion and self.transaction_type in ["deposit", "withdrawal","weltrade_deposit","book_subscription"]:
             billing, created = BillingCycle.objects.get_or_create(
                 client_name="Supreme AI",
                 paid=False,
